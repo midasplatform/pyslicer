@@ -7,9 +7,6 @@ import zipfile
 import shutil
 
 
-def parseArgs():
-    (script, url, email, api_key, item_id, parent_folder_id) = sys.argv
-    return (url, email, api_key, item_id, parent_folder_id)
 
 def createTmpDir():
     tmpdirpath = 'tmpdir'
@@ -72,13 +69,13 @@ def changeIntensity(tmpdir, headerfile):
 # TODO very hackish in terms of copying everything up as a single item
 # may want to actually read headers and create items based on correspondence or something else
 # to manage header and content 
-def uploadOutput(outdir, parent_folder_id):
+def uploadOutput(outdir, parent_folder_id, output_item_name):
     # read everything in the outdir and upload it as a single item
     # create a new item
-    itemname = 'output from slicer'
     # need a folder id
-    item = pydas.communicator.create_item(pydas.token, itemname, parent_folder_id) 
+    item = pydas.communicator.create_item(pydas.token, output_item_name, parent_folder_id) 
     item_id = item['item_id']
+    print "output_item_id="+item_id
     for filename in os.listdir(outdir):
         upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, filename)
         filepath=os.path.join(outdir, filename)
@@ -90,12 +87,12 @@ def uploadOutput(outdir, parent_folder_id):
 
 
 def runDemo():
-    (url, email, api_key, item_id, parent_folder_id) = parseArgs()
+    (script, url, email, api_key, item_id, parent_folder_id, output_item_name) = sys.argv
     pydasConnection(url, email, api_key)
     tmpdir = createTmpDir()
     headerfile = downloadItem(tmpdir, item_id)
     outdir = changeIntensity(tmpdir, headerfile)
-    uploadOutput(outdir, parent_folder_id)
+    uploadOutput(outdir, parent_folder_id, output_item_name)
     removeTmpDir(tmpdir)
     slicer.app.exit()
 
