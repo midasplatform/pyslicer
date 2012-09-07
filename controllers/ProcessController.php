@@ -38,12 +38,15 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     // TODO put these paths in the config, once a config exists
 
     // set these two
-    $slicerPath = 'FULL_PATH/Slicer';
-    $twistedServerUrl = 'FULL_SERVER_PATH';
+    $twistedServerUrl = 'http://localhost:8880/';
 
     
     // TODO add a check for the user session existing
     $itemId = $this->_getParam('itemId');
+    $outputItemName = $this->_getParam('outputItemName');
+    
+    
+    
     if(!isset($itemId) || !is_numeric($itemId))
       {
       throw new Zend_Exception('invalid itemId');
@@ -83,7 +86,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     // TODO probably a security hole to put the email and api key on a cmd line execution, other
     // users of that machine could see them with top/ps
     // similarly with putting in the url
-    $slicerjobParams = array($midasUrl, $userEmail, $apiKey, $itemId, $parentFolderId);
+    $slicerjobParams = array($midasUrl, $userEmail, $apiKey, $itemId, $parentFolderId, $outputItemName);
     $requestParams = "";
     foreach ($slicerjobParams as $ind => $param)
       {
@@ -102,9 +105,18 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     $data = file_get_contents($url);
     // data is false if no server
     // otherwise data is response from call
-    
-    // redirect to the parent folder
-    $this->_redirect('/folder/'.$parentFolderId);
+    if($data === false)
+      {
+      // redirect to the parent folder
+      $this->_redirect('/folder/'.$parentFolderId);
+      }
+    else
+      {
+      $dataParts = explode('=', $data);
+      $outputItemId = $dataParts[1];
+      // redirect to the output item
+      $this->_redirect('/item/'.$outputItemId);
+      }
     }
 
 
