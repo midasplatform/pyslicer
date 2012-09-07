@@ -23,8 +23,7 @@ class Pyslicer_Notification extends MIDAS_Notification
       return null;
       }
     $itemModel = MidasLoader::loadModel('Item');
-    if($itemModel->policyCheck($item, null, MIDAS_POLICY_READ) ||
-       isset($this->userSession->Dao) && $itemModel->policyCheck($item, $this->userSession->Dao, MIDAS_POLICY_READ))
+    if(isset($this->userSession->Dao) && $itemModel->policyCheck($item, $this->userSession->Dao, MIDAS_POLICY_READ))
       {
       $webroot = Zend_Controller_Front::getInstance()->getBaseUrl();
       return '<li><a href="'.$webroot.'/'.$this->moduleName.'/process/item?itemId='.$params['item']->getKey().

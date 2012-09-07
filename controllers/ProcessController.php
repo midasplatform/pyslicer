@@ -36,22 +36,13 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
   function itemAction()
     {
     // TODO put these paths in the config, once a config exists
-      
-    $slicerPath = 'FILL_IN';
-    $workDirRoot = 'FILL_IN';
 
-    $script = $workDirRoot . 'quick.py';
-    $scriptOut = $workDirRoot . 'quick.out';
-    $scriptErr = $workDirRoot . 'quick.err';
-    $xvfbLog = $workDirRoot . 'xvfb.log';
+    // set these two
+    $slicerPath = 'FULL_PATH/Slicer';
+    $twistedServerUrl = 'FULL_SERVER_PATH';
+
     
-    $slicerPathArgs = 'xvfb-run -a -e '.$xvfbLog.' '.$slicerPath.' --no-main-window --python-script';
-    $linuxAsync = '> '.$scriptOut.' 2>'.$scriptErr.' &';
-    //$linuxAsync = '> /dev/null 2>/dev/null &';
-    
-      
-      
-      
+    // TODO add a check for the user session existing
     $itemId = $this->_getParam('itemId');
     if(!isset($itemId) || !is_numeric($itemId))
       {
@@ -73,20 +64,6 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     $parentFolders = $itemDao->getFolders();
     $parentFolder = $parentFolders[0];
     
-    // just try to exec for now
-    $output = array();
-    $returnVar;
-    
-    // programmatically get
-    // slicer path
-    // script to run
-    // url of midas
-    // email of user
-    // api_key of user
-    // input item id
-    // output item parent folder id
-    
-    
     $userDao = $this->userSession->Dao;
     $userEmail = $userDao->getEmail();
     // get an api key for this user
@@ -96,19 +73,35 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
       {
       throw new Zend_Exception('You need to create a web-api key for this user for application: Default');
       }
+
     
     $midasPath = Zend_Registry::get('webroot');
-    $url = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
+    $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
     $apiKey = $userApiDao->getApikey();
     $parentFolderId = $parentFolder->getFolderId();
-    
-    $scriptArgs = implode(' ', array($script, $url, $userEmail, $apiKey, $itemId, $parentFolderId));
-    
-    $cmd = implode(' ', array($slicerPathArgs, $scriptArgs, $linuxAsync));
-    
+
     // TODO probably a security hole to put the email and api key on a cmd line execution, other
     // users of that machine could see them with top/ps
-    exec($cmd, $output, $returnVar);
+    // similarly with putting in the url
+    $slicerjobParams = array($midasUrl, $userEmail, $apiKey, $itemId, $parentFolderId);
+    $requestParams = "";
+    foreach ($slicerjobParams as $ind => $param)
+      {
+      if ($ind < count($slicerjobParams))
+        {
+        if ($ind > 0)
+          {
+          $requestParams .= "&";
+          }
+        $requestParams .= 'slicerjob=' . $param;
+        }
+      }
+
+    $url = $twistedServerUrl . '?' . $requestParams;
+    // TODO what if the url isn't there?  no server?  what do we get back?
+    $data = file_get_contents($url);
+    // data is false if no server
+    // otherwise data is response from call
     
     // redirect to the parent folder
     $this->_redirect('/folder/'.$parentFolderId);
