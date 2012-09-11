@@ -1,0 +1,41 @@
+var midas = midas || {};
+midas.visualize = midas.visualize || {};
+
+/**
+ * Callback handler for point selection within an image
+ */
+midas.visualize.handlePointSelect = function (point) {
+    $('div.MainDialog').dialog('close');
+    html= '<div><input style="width: 400px;" type="text" id="processItemSlicerOutputName" value="'
+          +json.visualize.item.name+'_seg_out" /></div><br/><br/>';
+    html+= '<div style="float: right;">';
+    html+= '<button class="globalButton processItemSlicerYes">Process</button>';
+    html+= '<button style="margin-left: 15px;" class="globalButton processItemSlicerNo">Cancel</button>';
+    html+= '</div>';
+    midas.showDialogWithContent('Choose name for output item', html, false);
+    $('#processItemSlicerOutputName').focus();
+    $('#processItemSlicerOutputName').select();
+
+    $('button.processItemSlicerYes').unbind('click').click(function () {
+        var outputItemName = $('#processItemSlicerOutputName').val();
+        var seed = '['+point[0]+', '+point[1]+', '+point[2]+']'; // serialize seed point value
+
+        ajaxWebApi.ajax({
+            method: 'midas.pyslicer.start.item.processing',
+            args: 'item_id=' + json.visualize.item.item_id + '&output_item_name=' + outputItemName + '&seed=',
+            success: function(results) {
+                $('div.MainDialog').dialog('close');
+                console.log(results);
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+                midas.createNotice(XMLHttpRequest.message, '4000', 'error');
+            }
+        });
+        
+    });
+
+    $('button.processItemSlicerNo').unbind('click').click(function () {
+        $('div.MainDialog').dialog('close');
+    });
+};
+
