@@ -2,6 +2,13 @@ var midas = midas || {};
 midas.visualize = midas.visualize || {};
 
 /**
+ * Activate point selection mode as soon as we are done initializing
+ */
+midas.visualize.postInitCallback = function () {
+    $('button.pointSelectButton').click();
+};
+
+/**
  * Callback handler for point selection within an image
  */
 midas.visualize.handlePointSelect = function (point) {
@@ -28,8 +35,10 @@ midas.visualize.handlePointSelect = function (point) {
             args: 'item_id='+json.visualize.item.item_id+'&output_item_name='+outputItemName+'&seed='+seed,
             success: function(results) {
                 $('div.MainDialog').dialog('close');
-                console.log(results);
                 $('#processingPleaseWait').hide();
+                if(results.data.redirect) {
+                    window.location = results.data.redirect;
+                }
             },
             error: function(XMLHttpRequest, textStatus, errorThrown) {
                 midas.createNotice(XMLHttpRequest.message, '4000', 'error');
