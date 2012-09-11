@@ -54,7 +54,7 @@ class Pyslicer_ApiComponent extends AppComponent
    * @param output_folder_id (optional) The id of the folder where the output item
      will be created, if not supplied, the first parent folder found on the input
      item will be used as the output folder.
-   * @return TODO for now data from response.
+   * @return redirect => redirectURL.
    */
   public function startItemProcessing($args)
     {
@@ -154,8 +154,23 @@ class Pyslicer_ApiComponent extends AppComponent
     // return value here
     $data = file_get_contents($url);  
       
-    // TODO some better return value
-    return $data;
+    // if we get back an output item id in the synchronous case, redirect to that
+    // regardless of what we get back, should return a redirect URL
+    $outputItemKey = 'output_item_id=';
+    if($data === false)
+      {
+      throw new Zend_Exception("Cannot connect with Slicer Server.");  
+      }
+    elseif(strpos($data, $outputItemKey) === 0)
+      {
+      $outputItemId = substr($data, s($outputItemKey));
+      $redirectURL = $midasPath . '/visualize/paraview/slice?itemId='.$itemId.'&meshes='.$outputItemId.'&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.meshView.js';
+      return array('redirect' => $redirectURL);
+      }
+    else
+      {
+      throw new Zend_Exception("No output_item_id supplied, server says: ". $data);
+      }
     }
 
 } // end class
