@@ -50,6 +50,7 @@ class Pyslicer_ApiComponent extends AppComponent
    * @param token Authentication token
    * @param item_id The id of the item to be processed
    * @param output_item_name The name of the created output item
+   * @param seed The x,y,z point coords of the seed point
    * @param output_folder_id (optional) The id of the folder where the output item
      will be created, if not supplied, the first parent folder found on the input
      item will be used as the output folder.
@@ -60,7 +61,7 @@ class Pyslicer_ApiComponent extends AppComponent
     // TODO probably want some notion of which script to run
     // maybe get that as an item? or from the terminal? or from a list?
       
-    $this->_checkKeys(array('item_id', 'output_item_name'), $args);    
+    $this->_checkKeys(array('item_id', 'output_item_name', 'seed'), $args);    
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
@@ -72,6 +73,8 @@ class Pyslicer_ApiComponent extends AppComponent
     
     $itemId = $args['item_id'];
     $outputItemName = $args['output_item_name'];
+    // TODO pass along the seed
+    $seed = $args['seed'];
 
     // check the input item
     $itemDao = $itemModel->load($itemId);
@@ -134,7 +137,15 @@ class Pyslicer_ApiComponent extends AppComponent
       }
 
     // TODO store remote processing job info
-      
+    $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
+    $job = MidasLoader::newDao('JobDao', 'remoteprocessing');
+    $job->setCreatorId($userDao->getUserId());
+    $job->setStatus(MIDAS_REMOTEPROCESSING_STATUS_WAIT);
+    // TODO script, params, name
+    $jobModel->save($job);    
+    $jobModel->addItemRelation($job, $itemDao, MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT);
+    
+    
     // TODO store twisted server url in config
     $twistedServerUrl = 'http://localhost:8880/';
     $url = $twistedServerUrl . '?' . $requestParams;

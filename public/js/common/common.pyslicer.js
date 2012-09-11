@@ -10,11 +10,13 @@ $(document).ready(function() {
 
         $('input.processItemSlicerYes').unbind('click').click(function () {
             var outputItemName = $('#processItemSlicerOutputName').val();
-            //$.post(json.global.webroot+'/pyslicer/process/item/', { itemId: json.item.item_id, outputItemName: outputItemName});
+            
+            // TODO need to get seed value (x,y,z)
+            var seed = '0,0,0';
             
             ajaxWebApi.ajax({
                 method: 'midas.pyslicer.start.item.processing',  
-                args: 'item_id=' + json.item.item_id + '&output_item_name=' + outputItemName,
+                args: 'item_id=' + json.item.item_id + '&output_item_name=' + outputItemName + '&seed=' + seed,
                 success: function(results) {
                     $( "div.MainDialog" ).dialog('close');
                 },
@@ -29,18 +31,5 @@ $(document).ready(function() {
             $( "div.MainDialog" ).dialog('close');
         });
 
-
-
-/*
-                midas.showDialogWithContent(json.item.message['delete'], html, false);
-
-                $('input.deleteItemYes').unbind('click').click(function() {
-                    location.replace(json.global.webroot+'/item/delete?itemId='+json.item.item_id);
-                });
-                $('input.deleteItemNo').unbind('click').click(function() {
-                    $( "div.MainDialog" ).dialog('close');
-                });
-            }
-        });*/
     });
 });
