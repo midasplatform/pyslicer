@@ -126,7 +126,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $segmentationPipeline = 'segmentation';
     $job->setScript($segmentationPipeline);
     // TODO json encode params set
-    $job->setParams($seed);
+    $job->setParams(JsonComponent::encode($seed));
     $jobModel->save($job);    
     $jobModel->addItemRelation($job, $itemDao, MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT);
 
@@ -200,7 +200,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }*/
     else
       {
-      $redirectURL = $moduleWebroot . '/process/status';
+      $redirectURL = $midasUrl . '/process/status';
       return array('redirect' => $redirectURL);
       //throw new Zend_Exception("No output_item_id supplied, server says: ". $data);
       }
