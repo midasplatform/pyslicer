@@ -138,7 +138,6 @@ class SlicerProcess(protocol.ProcessProtocol):
             self.jobManager.processEvent(event)
 
     def errReceived(self, data):
-        print data
         print str(self.jobId) + "errReceived! with %d bytes!" % len(data)
         self.err = self.err + data
 
@@ -155,7 +154,6 @@ class SlicerProcess(protocol.ProcessProtocol):
             event = SlicerProcessStatusEvent.parseEvent(line)
             if event is not None:
                 self.jobManager.processEvent(event)
-
 
 
 
@@ -179,7 +177,8 @@ class SlicerProcess(protocol.ProcessProtocol):
         slicerCmdParts = [slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, self.requestArgs]#['slicerjob']
         cmd = xvfbCmdParts + slicerCmdParts  
         print str(self.jobId) + " run: " + str(cmd)
-        reactor.spawnProcess(self, 'xvfb-run', cmd, {})
+        print ">>>>>>>>>>>>>>>SlicerProcess running:",str(cmd)
+        reactor.spawnProcess(self, 'xvfb-run', cmd, {}, usePTY=True)
         return "runreturn"
 
 

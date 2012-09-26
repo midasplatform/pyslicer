@@ -55,6 +55,7 @@ class SlicerjobInit(Resource):
              params = [(k,','.join(v)) for k,v in request.args.items()]
              params = '?'.join([k + '=' + v for k,v in params])
              print params
+             print ">>>>>>>>>>>>>>>>>>>>>>TWSERVER starting SlicerProcess"
              slicerJob = SlicerProcess(jobManager, jobId, params)
              slicerJob.run() 
              response = response + str(jobId)
