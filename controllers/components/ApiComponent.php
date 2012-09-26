@@ -200,7 +200,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }*/
     else
       {
-      $redirectURL = $midasUrl . '/process/status';
+      $redirectURL = $midasUrl . '/pyslicer/process/status';
       return array('redirect' => $redirectURL);
       //throw new Zend_Exception("No output_item_id supplied, server says: ". $data);
       }
