@@ -19,4 +19,5 @@
 =========================================================================*/
 define('MIDAS_PYSLICER_INVALID_POLICY', -151);
 define('MIDAS_PYSLICER_INVALID_PARAMETER', -150);
+define('MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION', 3);
 ?>
