@@ -40,7 +40,7 @@ class SlicerjobStatus(Resource):
 
 
 
-class SlicerjobInit(resource.Resource):
+class SlicerjobInit(Resource):
     isLeaf = True
     def __init__(self, jobManager):
         self.jobManager = jobManager
@@ -49,8 +49,8 @@ class SlicerjobInit(resource.Resource):
         print request.args
         print "SlicerjobInit"
         response = 'job:'
-        if 'pipeline' in request.args and 'segmentation' in request.args['pipeline']:
-             jobId = jobManager.getNextJobId()
+        if 'pipeline' in request.args and 'segmentation' in request.args['pipeline'] and 'jobid' in request.args:
+             jobId = request.args['jobid'][0]#jobManager.getNextJobId()
              requestArgs = ''
              params = [(k,','.join(v)) for k,v in request.args.items()]
              params = '?'.join([k + '=' + v for k,v in params])
@@ -82,3 +82,7 @@ slicerjobRoot.putChild('status', slicerjobStatus)
 
 reactor.listenTCP(8880, server.Site(root))
 reactor.run()
+
+
+
+# TODO create a main, allow for a diff dir

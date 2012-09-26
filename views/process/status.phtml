@@ -1,0 +1,79 @@
+<?php
+/*=========================================================================
+MIDAS Server
+Copyright (c) Kitware SAS. 20 rue de la Villette. All rights reserved.
+69328 Lyon, FRANCE.
+
+See Copyright.txt for details.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notices for more information.
+=========================================================================*/
+
+
+ 
+$this->headScript()->appendFile($this->coreWebroot . '/public/js/jquery/jquery.tablesorter.min.js');
+$this->headScript()->appendFile($this->apiWebroot . '/public/js/common/common.ajaxapi.js');
+$this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/process.status.js');
+?>
+<link type="text/css" rel="stylesheet" href="<?php echo $this->coreWebroot?>/public/css/jquery/jquery.tablesorter.css" />
+<link type="text/css" rel="stylesheet" href="<?php echo $this->moduleWebroot?>/public/css/layout/pyslicer.css" />
+
+<div id="showjobs" class="viewMain" >
+
+
+      
+      
+      
+    
+    <table class="tablesorter" id="tablesorter_pyslicer_jobs_status">
+      <thead>
+        <tr class="header">
+        <?php
+          foreach($this->columnHeaders as $column => $header)
+            {
+            echo "<th class='statuscol'>".$header."</th>";
+            }
+        ?>
+        </tr>
+        </thead>
+        <tbody>
+          <?php       
+            $stripeClasses = array('odd', 'even');
+            $stripeClassInd = 0;
+            foreach($this->jobsRows as $jobRow)
+              {
+              echo "<tr class='resultsRow ".$stripeClasses[$stripeClassInd++ % 2]."'>";
+              foreach($this->columnHeaders  as $column => $header)
+                {
+                if($column === 'status')
+                  {
+                  $statusString = $jobRow['status_string'];
+                  $statusClass = $jobRow['status_class'];
+                  echo '<td class="'.$statusClass.'" >'.$statusString."</td>";
+                  }
+                elseif($column === 'output')
+                  {
+                  $outputString = $jobRow['output_string'];
+                  $outputUrl = $jobRow['output_url'];
+                  $outputQtip = $jobRow['output_qtip'];
+                  // TODO something with qtip
+                  $outputString = '<a href="'.$outputUrl.'">'.$outputString.'</a>';
+                  echo "<td>".$outputString."</td>";
+                  }
+                else
+                  {
+                  $colVal = $jobRow[$column];
+                  echo "<td>".$colVal."</td>";
+                  }
+                }
+              echo "</tr>";
+              }
+          ?> 
+      </tbody>
+    </table>
+    <br/>
+    </div>
+
+
+

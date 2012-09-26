@@ -11,20 +11,25 @@ import shutil
 class SlicerProcessJobManager():
     def __init__(self, tmpDirRoot):
         self.jobs = {}
-        self.processCount = 0
+        #self.processCount = 0
         self.tmpDirRoot = tmpDirRoot
 
-    def getNextJobId(self):
-        # could be problematic if multithreaded
-        jobId = self.processCount
-        self.processCount = self.processCount + 1
+#    def getNextJobId(self):
+#        # could be problematic if multithreaded
+#        jobId = self.processCount
+#        self.processCount = self.processCount + 1
+#        self.jobs[str(jobId)] = {}
+#        return jobId 
+    def addJob(self, jobId):
         self.jobs[str(jobId)] = {}
-        return jobId 
+
 
 
     def processEvent(self, event):
         jobEvents = self.jobs[str(event.jobId)]
         jobEvents[event.eventId] = event
+
+
        
  
     def getStatus(self, jobId=None):
@@ -111,6 +116,7 @@ class SlicerProcess(protocol.ProcessProtocol):
     def __init__(self, jobManager, jobId, requestArgs):
         self.jobManager = jobManager
         self.jobId = jobId
+        self.jobManager.addJob(jobId)
         self.requestArgs = requestArgs
         self.data = ""
         self.err = ""
@@ -189,7 +195,9 @@ class SlicerPipeline():
     event_pipelineend = "PipelineEnd"
     event_exception = "Exception"
 
-
+    midasstatus_started = 1
+    midasstatus_done = 2
+    midasstatus_exception = 3
 
     def __init__(self, pipelineName, jobId, pydasParams, tmpDirRoot):
         self.pipelineName = pipelineName
@@ -248,13 +256,23 @@ class SlicerPipeline():
         # read everything in the outdir and upload it as a single item
         # create a new item
         # need a folder id
+        (email, apiKey, url) = self.pydasParams
+        pydas.login(email=email, api_key=apiKey, url=url)
         item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId)
         item_id = item['item_id']
         for filename in os.listdir(self.outdir):
             upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, filename)
             filepath=os.path.join(self.outdir, filename)
             pydas.communicator.perform_upload(upload_token, filename, itemid=item_id, filepath=filepath)
-
+        # set the output item as an output for the job
+        method = 'midas.pyslicer.add.job.output.item'
+        parameters = {}
+        parameters['token'] = pydas.token
+        parameters['job_id'] = self.jobId
+        parameters['item_id'] = item_id
+        print parameters
+        pydas.communicator.request(method, parameters) 
+        return item_id
 
 
     def process(self):
@@ -283,9 +301,27 @@ class SlicerPipeline():
     def uploadOutputImpl(self):
         pass
 
+   
+    def reportMidasStatus(self, status, condition=None):
+        # TODO add these methods to pydas
+        # TODO add condition to api call 
+        (email, apiKey, url) = self.pydasParams
+        pydas.login(email=email, api_key=apiKey, url=url)
+        method = 'midas.pyslicer.update.job.status'
+        parameters = {}
+        parameters['token'] = pydas.token
+        parameters['job_id'] = self.jobId
+        parameters['status'] = status
+        if condition is not None: parameters['condition'] = condition
+        print parameters
+        pydas.communicator.request(method, parameters) 
+
+
     def execute(self):
         try:
             self.tracker.start()
+            # send pydas pipeline started
+            self.reportMidasStatus(self.midasstatus_started)
             self.reportStatus(self.event_pipelinestart)
             self.createTmpDir()
             self.downloadInput()
@@ -293,10 +329,17 @@ class SlicerPipeline():
             self.uploadOutput()
             self.removeTmpDir()
             self.reportStatus(self.event_pipelineend)
+            # send pydas pipeline finished
+            self.reportMidasStatus(self.midasstatus_done)
             self.tracker.finish()
         except Exception as exception:
+            # TODO where to do exceptions status and conditions
             # TODO send this through status tracker
             self.log.exception(exception)
             self.tracker.reportStatus(self.event_exception)
+            import traceback
+            etype, value, tb = sys.exc_info()
+            emsg = repr(traceback.format_exception(etype, value, tb))
+            self.reportMidasStatus(self.midasstatus_exception, emsg)
             exit(1)
       

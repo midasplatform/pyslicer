@@ -2,6 +2,7 @@ from __main__ import vtk, slicer
 
 
 from slicerprocess import SlicerPipeline
+import pydas
 
 class SlicerSegPipeline(SlicerPipeline):
 
@@ -72,9 +73,28 @@ class SlicerSegPipeline(SlicerPipeline):
 
     def uploadOutputImpl(self):
         #print "segmodeluploadoutputimpl"
-        self.uploadItem(self.outFile, self.outputFolderId)
+        item_id = self.uploadItem(self.outFile, self.outputFolderId)
+        (email, apiKey, url) = self.pydasParams
+        pydas.login(email=email, api_key=apiKey, url=url)
+        # TODO move metadata to superclass
+        # set metadata on the output item
+        method = 'midas.item.setmultiplemetadata'
+        parameters = {}
+        parameters['token'] = pydas.token
+        parameters['itemid'] = item_id
+        parameters['count'] = 2
+        parameters['element_1'] = 'Visualize'
+        parameters['element_2'] = 'Visualize'
+        parameters['qualifier_1'] = 'DiffuseColor'
+        parameters['qualifier_2'] = 'Orientation'
+        parameters['value_1'] = '[1.0,0.0,0.0]'
+        parameters['value_2'] = '[180.0,180.0,0.0]'
+        print parameters
+        pydas.communicator.request(method, parameters) 
 
-
+    def process(self):
+        self.reportStatus(self.event_process)
+        self.processImpl()        
     @staticmethod
     def entryPoint():
         # parse cmd line args
