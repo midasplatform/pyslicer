@@ -159,7 +159,8 @@ class Pyslicer_ApiComponent extends AppComponent
                              'email' => $userEmail,
                              'apikey' => $apiKey,
                              'inputitemid' => $itemId,
-                             'coords' => JsonComponent::encode($seed),
+        // TODO some formatting/error checking on seeds
+                             'coords' => $seed[0] . ',' . $seed[1] . ',' . $seed[2],
                              'outputfolderid' => $parentFolderId,
                              'outputitemname' => $outputItemName,
                              'jobid' => $job->getKey());
