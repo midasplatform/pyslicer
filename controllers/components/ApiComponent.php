@@ -75,7 +75,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $itemId = $args['item_id'];
     $outputItemName = $args['output_item_name'];
     // TODO pass along the seed
-    $seed = $args['seed'];
+    $seed = JsonComponent::decode($args['seed']);
 
     // check the input item
     $itemDao = $itemModel->load($itemId);
