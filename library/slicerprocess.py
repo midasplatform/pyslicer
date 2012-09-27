@@ -1,3 +1,10 @@
+# TODO this is a terrible HACK to add site packages to the Slicer Python
+# but better than what was before, hopefully to be improved further
+tmp_paths = ['/usr/lib/python2.6/dist-packages/',
+             '/usr/local/lib/python2.6/dist-packages/']
+import sys
+sys.path.extend(tmp_paths)
+
 from twisted.internet import reactor
 from twisted.internet import protocol
 import re
