@@ -1,8 +1,15 @@
+# TODO this is a terrible HACK to add site packages to the Slicer Python
+# but better than what was before, hopefully to be improved further
+tmp_paths = ['/usr/lib/python2.6/dist-packages/',
+             '/usr/local/lib/python2.6/dist-packages/']
+import sys
+sys.path.extend(tmp_paths)
+
 from __main__ import vtk, slicer
-
-
 from slicerprocess import SlicerPipeline
 import pydas
+
+
 
 class SlicerSegPipeline(SlicerPipeline):
 
@@ -95,25 +102,39 @@ class SlicerSegPipeline(SlicerPipeline):
     def process(self):
         self.reportStatus(self.event_process)
         self.processImpl()        
-    @staticmethod
-    def entryPoint():
-        # parse cmd line args
-        import sys
-        print "seg_pipeline entrypoint"
-        print sys.argv
-        (script, jobId, tmpDirRoot, requestParams) = sys.argv
-        print requestParams
-        params = requestParams.split('?')
-        print params
-        params = [param.split('=') for param in params]
-        requestMap = {}
-        for (k,v) in params:
-            requestMap[k] = v 
-        pydasParams = (requestMap['email'], requestMap['apikey'], requestMap['url'])
-        sp = SlicerSegPipeline(jobId, pydasParams, tmpDirRoot, requestMap['inputitemid'], requestMap['coords'], requestMap['outputitemname'], requestMap['outputfolderid'])
-        sp.execute()
 
 
-SlicerSegPipeline.entryPoint()
 
 
+
+if __name__ == '__main__':
+    (script, jobId, tmpDirRoot, requestParams) = sys.argv
+    params = requestParams.split('?')
+    params = [param.split('=') for param in params]
+    requestMap = {}
+    for (k,v) in params:
+        requestMap[k] = v 
+    pydasParams = (requestMap['email'], requestMap['apikey'], requestMap['url'])
+    sp = SlicerSegPipeline(jobId, pydasParams, tmpDirRoot, requestMap['inputitemid'], requestMap['coords'], requestMap['outputitemname'], requestMap['outputfolderid'])
+    sp.execute()
+    
+
+
+#    @staticmethod
+#    def entryPoint():
+#        # parse cmd line args
+#        import sys
+#        print "seg_pipeline entrypoint"
+#        print sys.argv
+#        (script, jobId, tmpDirRoot, requestParams) = sys.argv
+#        print requestParams
+#        params = requestParams.split('?')
+#        print params
+#        params = [param.split('=') for param in params]
+#        requestMap = {}
+#        for (k,v) in params:
+#            requestMap[k] = v 
+#        pydasParams = (requestMap['email'], requestMap['apikey'], requestMap['url'])
+#        sp = SlicerSegPipeline(jobId, pydasParams, tmpDirRoot, requestMap['inputitemid'], requestMap['coords'], requestMap['outputitemname'], requestMap['outputfolderid'])
+#        sp.execute()
+#    

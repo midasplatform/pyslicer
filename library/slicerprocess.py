@@ -9,11 +9,11 @@ import shutil
 
 
 class SlicerProcessJobManager():
-    def __init__(self, tmpDirRoot):
+    def __init__(self, tmpDirRoot, slicerPath):
         self.jobs = {}
         #self.processCount = 0
         self.tmpDirRoot = tmpDirRoot
-
+        self.slicerPath = slicerPath
 #    def getNextJobId(self):
 #        # could be problematic if multithreaded
 #        jobId = self.processCount
@@ -168,18 +168,15 @@ class SlicerProcess(protocol.ProcessProtocol):
         print str(self.jobId) + "processEnded, status %d" % (reason.value.exitCode,)
 
     def run(self):
-        # TODO make these values part of config or constructor
-        xvfbLogfile = '/slicerweb/server/xvfb.log'
+        xvfbLogfile = os.path.join(self.jobManager.tmpDirRoot, 'xvfb.log')
         xvfbCmdParts = ['xvfb-run', '-a', '-e', xvfbLogfile]
-        slicerPath = '/slicerweb/Slicer-4.1.0-2012-09-11-linux-amd64/Slicer'
         slicerArgs = ['--no-main-window', '--python-script']
-        slicerPythonScript = ['/slicerweb/Slicer-4.1.0-2012-09-11-linux-amd64/bin/Python/seg_pipeline.py']
-        slicerCmdParts = [slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, self.requestArgs]#['slicerjob']
+        slicerPythonScript = ['seg_pipeline.py']
+        slicerCmdParts = [self.jobManager.slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, self.requestArgs]#['slicerjob']
         cmd = xvfbCmdParts + slicerCmdParts  
         print str(self.jobId) + " run: " + str(cmd)
         print ">>>>>>>>>>>>>>>SlicerProcess running:",str(cmd)
         reactor.spawnProcess(self, 'xvfb-run', cmd, {}, usePTY=True)
-        return "runreturn"
 
 
 

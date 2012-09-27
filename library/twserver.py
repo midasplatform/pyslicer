@@ -50,7 +50,7 @@ class SlicerjobInit(Resource):
         print "SlicerjobInit"
         response = 'job:'
         if 'pipeline' in request.args and 'segmentation' in request.args['pipeline'] and 'jobid' in request.args:
-             jobId = request.args['jobid'][0]#jobManager.getNextJobId()
+             jobId = request.args['jobid'][0]
              requestArgs = ''
              params = [(k,','.join(v)) for k,v in request.args.items()]
              params = '?'.join([k + '=' + v for k,v in params])
@@ -58,7 +58,7 @@ class SlicerjobInit(Resource):
              print ">>>>>>>>>>>>>>>>>>>>>>TWSERVER starting SlicerProcess"
              slicerJob = SlicerProcess(jobManager, jobId, params)
              slicerJob.run() 
-             response = response + str(jobId)
+             response = "started job " + str(jobId)
         return response
 
 
@@ -68,22 +68,28 @@ class SlicerjobInit(Resource):
 #http://localhost:8880/slicerjob/init/?pipeline=segmentation&url=http://localhost/midas3&email=midas_user_email&apikey=midas_user_apikey&inputitemid=1778&coords=93.5,82.2,89.9&outputfolderid=2&outputitemname=myseg
 
 
-# TODO would like to not hardcode this root dir
-jobManager = SlicerProcessJobManager('/slicerweb/server')
-
-root = ServerRoot()
-slicerjobRoot = Slicerjob()
-slicerjobInit = SlicerjobInit(jobManager)
-slicerjobStatus = SlicerjobStatus(jobManager)
-
-root.putChild('slicerjob', slicerjobRoot)
-slicerjobRoot.putChild('init', slicerjobInit)
-slicerjobRoot.putChild('status', slicerjobStatus)
-
-
-reactor.listenTCP(8880, server.Site(root))
-reactor.run()
-
-
-
-# TODO create a main, allow for a diff dir
+if __name__ == '__main__':
+    # read the config file for slicer_path
+    config_file = open('twserver.cfg')
+    config = {}
+    for line in config_file:
+        line = line.strip()
+        if line is not None and line != '':
+            cols = line.split('=')
+            config[cols[0]] = cols[1]
+    config_file.close()
+    import os
+    if 'slicer_path' not in config or not os.path.isfile(config['slicer_path']):
+        print "You must specify the path to the Slicer exe as slicer_path in twserver.cfg"
+        exit(1)
+    # set current dir as temp working dir
+    jobManager = SlicerProcessJobManager(os.getcwd(), config['slicer_path'])
+    root = ServerRoot()
+    slicerjobRoot = Slicerjob()
+    slicerjobInit = SlicerjobInit(jobManager)
+    slicerjobStatus = SlicerjobStatus(jobManager)
+    root.putChild('slicerjob', slicerjobRoot)
+    slicerjobRoot.putChild('init', slicerjobInit)
+    slicerjobRoot.putChild('status', slicerjobStatus)
+    reactor.listenTCP(8880, server.Site(root))
+    reactor.run()
