@@ -35,7 +35,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     if(isset($this->userSession->Dao))
       {
       $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
-      $jobs = $jobModel->findBy('creator_id', $this->userSession->Dao->getKey());
+      $jobs = $jobModel->getByUser($this->userSession->Dao);
       
       $midasPath = Zend_Registry::get('webroot');
       $columnsHeaders = array('name' => 'Name', 'script' => 'Job Type', 'params' => 'Params', 'creation_date' => 'Creation Date', 'status' => 'Status', 'output' => 'Output');
