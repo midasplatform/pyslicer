@@ -36,7 +36,10 @@ class SlicerjobStatus(Resource):
         self.jobManager = jobManager
 
     def render_GET(self, request):
-        return 'status:' + str(self.jobManager.getStatus())
+        if 'job_id' in request.args:
+            return str(self.jobManager.getStatus(jobId=request.args['jobid'][0]))
+        else:
+            return str(self.jobManager.getStatus())
 
 
 
@@ -49,21 +52,19 @@ class SlicerjobInit(Resource):
         print request.args
         print "SlicerjobInit"
         response = 'job:'
-        if 'pipeline' in request.args and 'segmentation' in request.args['pipeline'] and 'jobid' in request.args:
-             jobId = request.args['jobid'][0]
-             requestArgs = ''
-             params = [(k,','.join(v)) for k,v in request.args.items()]
-             params = '?'.join([k + '=' + v for k,v in params])
-             print params
+        if 'pipeline' in request.args and 'job_id' in request.args:
+             print "YES"
+             job_id = request.args['job_id'][0]
+             pipeline = request.args['pipeline'][0]
              print ">>>>>>>>>>>>>>>>>>>>>>TWSERVER starting SlicerProcess"
-             slicerJob = SlicerProcess(jobManager, jobId, params)
+             slicerJob = SlicerProcess(jobManager, job_id, pipeline, request.args)
              slicerJob.run() 
-             response = "started job " + str(jobId)
+             response = "started job " + str(job_id)
         return response
 
 
 # check status like this:
-#http://localhost:8880/slicerjob/status
+#http://localhost:8880/slicerjob/status/?jobid=122
 # start a job like this:
 #http://localhost:8880/slicerjob/init/?pipeline=segmentation&url=http://localhost/midas3&email=midas_user_email&apikey=midas_user_apikey&inputitemid=1778&coords=93.5,82.2,89.9&outputfolderid=2&outputitemname=myseg
 
