@@ -342,7 +342,7 @@ class Pyslicer_ApiComponent extends AppComponent
    * @param moving_item_id The id of the image image item to be processed
    * @param fixed_fiducials json encoded list of 3D points
    * @param moving_fiducials json encoded list of 3D points
-   * @param transform_type one of <Rigid|Translation|Similarity>
+   * @param transform_type one of [Rigid|Translation|Similarity]
    * @param output_folder_id (optional) The id of the folder to create an output
      folder underneath.  If not supplied the user's Private folder will be used.
    * @param output_item_name (optional) The name of the created output item.  If
