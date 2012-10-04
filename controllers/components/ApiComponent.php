@@ -346,7 +346,7 @@ class Pyslicer_ApiComponent extends AppComponent
    * @param output_folder_id (optional) The id of the folder to create an output
      folder underneath.  If not supplied the user's Private folder will be used.
    * @param output_item_name (optional) The name of the created output item.  If
-     not supplied a syntentic name will be created.
+     not supplied a name like "Slicer_Job_X_output will be created.
    * @param job_name (optional) The name of the processing job, if not supplied,
      will be given a name like "Slicer Job X" where x is the job id.
    * @return redirect => redirectURL.
