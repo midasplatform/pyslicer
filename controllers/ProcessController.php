@@ -24,13 +24,91 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
 {
 
   public $_models = array('Item', 'Folder');
-
+  protected $statusStrings =
+    array(MIDAS_REMOTEPROCESSING_STATUS_WAIT => 'waiting',
+          MIDAS_REMOTEPROCESSING_STATUS_STARTED => 'started',
+          MIDAS_REMOTEPROCESSING_STATUS_DONE => 'done',
+          MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION => 'error');
+  protected $statusClasses =
+    array(MIDAS_REMOTEPROCESSING_STATUS_WAIT => 'midas_pyslicer_wait',
+          MIDAS_REMOTEPROCESSING_STATUS_STARTED => 'midas_pyslicer_started',
+          MIDAS_REMOTEPROCESSING_STATUS_DONE => 'midas_pyslicer_done',
+          MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION => 'midas_pyslicer_error');
   /** init method */
   function init()
     {
     }
+   
+
+  function segmentationInputsAndOutputs($job, $inputs, $outputs)// getServerURL(), $midasPath)
+    {
+    $inputLinks = array();
+    $outputLinks = array();
+    if(sizeof($inputs) == 0)
+      {
+      $inputLink = '';
+      $inputLinkText = 'Missing Input';
+      }
+    else
+      {
+      $inputLink = 'TODO';
+      $inputLinkText = 'View Input';
+      }
+    $inputLinks[] = array('text' => $inputLinkText, 'url' => $inputLink);
+    if($job->getStatus() == MIDAS_REMOTEPROCESSING_STATUS_DONE)
+      {
+      if(sizeof($outputs) == 0)
+        {
+        $outputLink = '';
+        $outputLinkText = 'Error: missing output';
+        }
+      else
+        {
+        if(sizeof($inputs) == 0)
+          {
+          $outputLink = '';
+          $outputLinkText = 'Error: missing input';
+          }
+        else
+          {
+          $inputItemId = $inputs[0]->getItemId();
+          $outputItemId = $outputs[0]->getItemId();
+          $outputLink = $this->getServerURL() . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.meshView.js';
+          $outputLinkText = 'View Output';
+          }
+        }
+      $outputLinks[] = array('text' => $outputLinkText, 'url' => $outputLink);
+      }
+    return array('inputs' => $inputLinks, 'outputs' => $outputLinks);
+    }
     
-  function statusAction()
+  function resolveInputsAndOutputs($job)
+    {
+    $inputs = array();
+    $outputs = array();
+    $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
+    $relatedItems = $jobModel->getRelatedItems($job);
+    foreach($relatedItems as $item)
+      {
+      if($item->getType() == MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT)
+        {
+        $inputs[] = $item;
+        }
+      elseif($item->getType() == MIDAS_REMOTEPROCESSING_RELATION_TYPE_OUPUT)
+        {
+        $outputs[] = $item;
+        }
+      }
+
+    $insAndOuts = array();
+    if($job->getScript() == 'segmentation')
+      {
+      $insAndOuts =$this->segmentationInputsAndOutputs($job, $inputs, $outputs);// getServerURL(), $midasPath)
+      }
+    return $insAndOuts;  
+    }
+    
+  function statuslistAction()
     {
     if(isset($this->userSession->Dao))
       {
@@ -39,16 +117,6 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
       
       $midasPath = Zend_Registry::get('webroot');
       $columnsHeaders = array('name' => 'Name', 'script' => 'Job Type', 'params' => 'Params', 'creation_date' => 'Creation Date', 'status' => 'Status', 'output' => 'Output');
-      $statusStrings =
-          array(MIDAS_REMOTEPROCESSING_STATUS_WAIT => 'waiting',
-                MIDAS_REMOTEPROCESSING_STATUS_STARTED => 'started',
-                MIDAS_REMOTEPROCESSING_STATUS_DONE => 'done',
-                MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION => 'error');
-      $statusClasses =
-          array(MIDAS_REMOTEPROCESSING_STATUS_WAIT => 'midas_pyslicer_wait',
-                MIDAS_REMOTEPROCESSING_STATUS_STARTED => 'midas_pyslicer_started',
-                MIDAS_REMOTEPROCESSING_STATUS_DONE => 'midas_pyslicer_done',
-                MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION => 'midas_pyslicer_error');
       $jobsRows = array();
       $this->view->columnHeaders = $columnsHeaders;
       foreach($jobs as $job)
@@ -56,11 +124,16 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
         $jobRow = array();
         foreach($columnsHeaders as $column => $header)
           {
-          if($column === 'status')
+          if($column === 'name')
+            {
+            $jobRow['name_string'] = $job->getName();
+            $jobRow['name_url'] = $midasPath . '/pyslicer/process/status?jobId='.$job->getJobId();
+            }            
+          elseif($column === 'status')
             {
             $status = $job->getStatus();
-            $jobRow['status_string'] = $statusStrings[$status];
-            $jobRow['status_class'] = $statusClasses[$status];
+            $jobRow['status_string'] = $this->statusStrings[$status];
+            $jobRow['status_class'] = $this->statusClasses[$status];
             }
           elseif($column === 'output')
             {
@@ -125,6 +198,41 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
       $this->view->jobsRows = array();  
       }
     }
+    
+  function statusAction()
+    {
+    if($this->userSession->Dao == null)
+      {
+      $this->haveToBeLogged();
+      return;
+      }
+      
+      
+    $jobId = $this->_getParam('jobId');  
+    if(!isset($jobId) || !is_numeric($jobId))
+      {
+      throw new Zend_Exception('invalid jobId');
+      }
+    $jobModel = MidasLoader::loadModel("Job", 'remoteprocessing');
+    $job = $jobModel->load($jobId);
+    if(!$job)
+      {
+      throw new Zend_Exception('invalid jobId');
+      }
+  
+    $userDao = $this->userSession->Dao;
+    if($userDao->getUserId() != $job->getCreator() && !$userDao->getAdmin())
+      {
+      throw new Zend_Exception('You do not have permissions to view this job.');
+      }
+      
+    $this->view->job = $job;
+    $this->view->statusStrings = $this->statusStrings;
+    $this->view->statusClasses = $this->statusClasses;
+    $this->view->insAndOuts = $this->resolveInputsAndOutputs($job);
+    }  
+    
+    
 
   /**
    *   Item Action
