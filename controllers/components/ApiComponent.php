@@ -76,7 +76,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $outputItemName = $args['output_item_name'];
     // TODO pass along the seed
     $seed = JsonComponent::decode($args['seed']);
-
+    
     // check the input item
     $itemDao = $itemModel->load($itemId);
     if($itemDao === false)
@@ -207,7 +207,201 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     }
 
-   // maybe take in a pipeline, have this call to the twisted server, when that gets any status it should call started, when it gets a finish it should call done
+    
+  protected function _loadValidItem($userDao, $itemId, $paramName)
+    {
+    $itemModel = MidasLoader::loadModel('Item');
+    $itemDao = $itemModel->load($itemId);
+    if($itemDao === false)
+      {
+      throw new Zend_Exception('The item for '.$paramName.' does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+    if(!$itemModel->policyCheck($itemDao, $userDao, MIDAS_POLICY_READ))
+      {
+      throw new Zend_Exception('Read access on the item for '.$paramName.' is required.', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+    return $itemDao;
+    }
+   
+  protected function _findValidOutputFolderId($userDao, $outputFolderId=false)
+    {
+    $folderModel = MidasLoader::loadModel('Folder');
+
+    // validate output folder for user writing
+    if($outputFolderId)
+      {
+      $outputFolder = $folderModel->load($outputFolderId);
+      if($outputFolder === false || !$folderModel->policyCheck($outputFolder, $userDao, MIDAS_POLICY_WRITE))
+        {
+        $outputFolderId = false;
+        }  
+      }
+    
+    if(!$outputFolderId)
+      {
+      $outputFolderId = $userDao->getPrivatefolderId();  
+      }
+      
+    return $outputFolderId;  
+    }
+      
+  protected function _getConnectionParams($userDao)
+    {
+    $userEmail = $userDao->getEmail();
+    
+    $midasPath = Zend_Registry::get('webroot');
+    $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
+    
+    $userApiModel = MidasLoader::loadModel('Userapi', 'api');
+    $userApiDao = $userApiModel->getByAppAndUser('Default', $userDao);
+    if(!$userApiDao)
+      {
+      throw new Zend_Exception('You need to create a web-api key for this user for application: Default');
+      }
+    $apiKey = $userApiDao->getApikey();      
+    
+    return array($userEmail, $apiKey, $midasUrl);
+    }
+
+    
+  // output_item_name will be set in job creation if it does not exist
+  // job_name will be set in job creation if it does not exist
+  // params will be modified if needed to set output_item_name
+  protected function _createJob($userDao, $script, $params, $inputItems, $jobName=false)
+    { 
+    $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
+    $job = MidasLoader::newDao('JobDao', 'remoteprocessing');
+    $job->setCreatorId($userDao->getUserId());
+    $job->setStatus(MIDAS_REMOTEPROCESSING_STATUS_WAIT);
+    $job->setScript($script);
+    $jobModel->save($job);
+    foreach($inputItems as $itemDao)
+      {
+      $jobModel->addItemRelation($job, $itemDao, MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT);
+      }
+
+    // now that a job id is defined...
+    if(!$jobName)
+      {
+      $jobName = 'Slicer Job ' . $job->getJobId();
+      }
+    $job->setName($jobName);
+    if(!$params['output_item_name'])
+      {
+      $jobName = $job->getName();
+      $jobName = str_replace(" ", "_", $jobName);
+      $outputItemName = $jobName . "_output";
+      $params['output_item_name'] = $outputItemName;
+      }
+    $job->setParams(JsonComponent::encode($params));
+    $jobModel->save($job);    
+    return $job;
+    }
+
+  protected function _constructJobCreationUrl($userDao, $script, $job, $params)
+    {
+    // TODO store twisted server url in config
+    $twistedServerUrl = 'http://localhost:8880/';
+    $jobInitPath = "slicerjob/init/";
+    // TODO probably a security hole to put the email and api key in the url
+    // TODO hardcoded seed
+    list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);    
+    $jobParams = array('pipeline' => $script,
+                       'url' => $midasUrl,
+                       'email' => $userEmail,
+                       'apikey' => $apiKey,
+                       'job_id' => $job->getJobId());
+    $jobParams = array_merge($jobParams, $params);
+    $requestParams = "";
+    $ind = 0;
+    foreach ($jobParams as $name => $value)
+      {
+      if ($ind > 0)
+        {
+        $requestParams .= "&";
+        }
+      $requestParams .= $name . '=' . $value;
+      $ind++;
+      }
+    
+    $url = $twistedServerUrl . $jobInitPath . '?' . $requestParams;
+    return $url;
+    }
+   
+    
+    
+    
+    
+    
+    
+    
+    
+  /**
+   * start a fiducial registration job
+   * @param fixed_item_id The id of the fixed image item to be processed
+   * @param moving_item_id The id of the image image item to be processed
+   * @param fixed_fiducials json encoded list of 3D points
+   * @param moving_fiducials json encoded list of 3D points
+   * @param transform_type one of <Rigid|Translation|Similarity>
+   * @param output_folder_id (optional) The id of the folder to create an output
+     folder underneath.  If not supplied the user's Private folder will be used.
+   * @param output_item_name (optional) The name of the created output item.  If
+     not supplied a syntentic name will be created.
+   * @param job_name (optional) The name of the processing job, if not supplied,
+     will be given a name like "Slicer Job X" where x is the job id.
+   * @return redirect => redirectURL.
+   */
+  public function startFiducialregistration($args)
+    {
+    $this->_checkKeys(array('fixed_item_id', 'moving_item_id', 'fixed_fiducials', 'moving_fiducials', 'fixed_fiducials', 'transform_type'), $args);    
+    $userDao = $this->_getUser($args);
+    if(!$userDao)
+      {
+      throw new Exception('Anonymous users may not process items', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    $fixedItem = $this->_loadValidItem($userDao, $args['fixed_item_id'], 'fixed_item_id');
+    $movingItem = $this->_loadValidItem($userDao, $args['moving_item_id'], 'moving_item_id');
+    $fixedFiducials = JsonComponent::decode($args['fixed_fiducials']);
+    $movingFiducials = JsonComponent::decode($args['moving_fiducials']);
+    $outputFolderId = $this->_findValidOutputFolderId($userDao, 
+                                                      isset($args['output_folder_id']) ? $args['output_folder_id'] : false);
+    $transformType = $args['transform_type'];
+    $transforms = array('Rigid', 'Translation', 'Similarity');
+    if(!in_array($transformType, $transforms))
+      {
+      throw new Zend_Exception('transform_type must be one of Rigid, Translation or Similarity.');
+      }
+    
+    $inputItems = array($fixedItem, $movingItem);
+    $script = 'fiducialregistration';
+    $params = array('fixed_item_id' => $fixedItem->getItemId(),
+                    'moving_item_id' => $movingItem->getItemId(),
+                    'fixed_fiducials' => JsonComponent::encode($fixedFiducials),
+                    'moving_fiducials' => JsonComponent::encode($movingFiducials),
+                    'transform_type' => $transformType,
+                    'output_folder_id' => $outputFolderId,
+                    'output_item_name' => isset($args['output_item_name']) ? $args['output_item_name'] : false);
+  
+    // output_item_name will be set in job creation if it does not exist
+    // job_name will be set in job creation if it does not exist
+    $job = $this->_createJob($userDao, $script, &$params, $inputItems,
+                             isset($args['job_name']) ? $args['job_name'] : false);
+    
+    $jobCreationUrl = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
+    
+    $data = file_get_contents($jobCreationUrl);  
+   
+    if($data === false)
+      {
+      throw new Zend_Exception("Cannot connect with Slicer Server.");  
+      }
+    else
+      {
+      $redirectURL = $midasUrl . '/pyslicer/process/status';
+      return array('redirect' => $redirectURL);
+      }
+    }
 
       
     

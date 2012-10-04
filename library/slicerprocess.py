@@ -1,9 +1,7 @@
 # TODO this is a terrible HACK to add site packages to the Slicer Python
 # but better than what was before, hopefully to be improved further
 tmp_paths = ['/usr/lib/python2.6/dist-packages/',
-             '/usr/local/lib/python2.6/dist-packages/',
-             '/usr/lib/python2.7/dist-packages/',
-             '/usr/local/lib/python2.7/dist-packages/']
+             '/usr/local/lib/python2.6/dist-packages/']
 import sys
 sys.path.extend(tmp_paths)
 
@@ -15,7 +13,7 @@ import os
 import sys
 import pydas
 import shutil
-
+import json
 
 class SlicerProcessJobManager():
     def __init__(self, tmpDirRoot, slicerPath):
@@ -42,15 +40,15 @@ class SlicerProcessJobManager():
        
  
     def getStatus(self, jobId=None):
-        print "getStatus"
+        print "getStatus", jobId
         print self.jobs
         if jobId is not None and jobId in self.jobs:
             status = str(jobId) +":"+ str(sorted(self.jobs[jobId].values(), key=lambda event: int(event.eventId)))
         else:
             status = ''
             for jobId, jobEvents in self.jobs.items():
-                jobEvents = sorted(jobEvents.values(), key=lambda event: int(event.eventId))
-                status = status + jobId+":"+ str(jobEvents)
+                jobEvents = [str(event) for event in sorted(jobEvents.values(), key=lambda event: int(event.eventId))]
+                status = str(jobEvents)
         return status
 
 
@@ -122,11 +120,18 @@ class SlicerPipelineStatusTracker():
 
 
 class SlicerProcess(protocol.ProcessProtocol):
-    def __init__(self, jobManager, jobId, requestArgs):
+    pipeline_scripts = {'segmentation' : 'seg_pipeline.py', 'fiducialregistration' : 'reg_pipeline.py'}
+
+
+
+    def __init__(self, jobManager, jobId, pipeline, request_args):
+    #def __init__(self, jobManager, jobId, requestArgs, jsonargs):
         self.jobManager = jobManager
         self.jobId = jobId
         self.jobManager.addJob(jobId)
-        self.requestArgs = requestArgs
+        #self.requestArgs = requestArgs
+        self.pipeline = pipeline
+        self.request_args = request_args
         self.data = ""
         self.err = ""
         self.events = {}
@@ -180,8 +185,14 @@ class SlicerProcess(protocol.ProcessProtocol):
         xvfbLogfile = os.path.join(self.jobManager.tmpDirRoot, 'xvfb.log')
         xvfbCmdParts = ['xvfb-run', '-a', '-e', xvfbLogfile]
         slicerArgs = ['--no-main-window', '--python-script']
-        slicerPythonScript = ['seg_pipeline.py']
-        slicerCmdParts = [self.jobManager.slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, self.requestArgs]#['slicerjob']
+        slicerPythonScript = [self.pipeline_scripts[self.pipeline]]
+        #licerPythonScript = ['seg_pipeline.py']
+        import json
+        json_args = json.dumps(self.request_args)
+        print json_args
+        print [json_args]
+        print [str(self.jobId), self.jobManager.tmpDirRoot, json_args]
+        slicerCmdParts = [self.jobManager.slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, json_args]#['slicerjob']
         cmd = xvfbCmdParts + slicerCmdParts  
         print str(self.jobId) + " run: " + str(cmd)
         print ">>>>>>>>>>>>>>>SlicerProcess running:",str(cmd)
@@ -251,13 +262,12 @@ class SlicerPipeline():
                 zip = zipfile.ZipFile(filepath)
                 zip.extractall(self.datadir)
                 zip.close()
-        # look for the header file or mha, this is very brittle
-        for filename in os.listdir(self.datadir):
-            if filename.endswith('.nhdr') or filename.endswith('.mha'):
-                self.headerFile = os.path.join(self.datadir, filename)
+        # return the path to the name of the item
+        item = pydas.communicator.item_get(pydas.token, itemId)
+        return os.path.join(self.datadir, item['name'])
 
 
-    def uploadItem(self, itemName, outputFolderId):
+    def uploadItem(self, itemName, outputFolderId, out_file=None):
         # read everything in the outdir and upload it as a single item
         # create a new item
         # need a folder id
@@ -265,11 +275,17 @@ class SlicerPipeline():
         pydas.login(email=email, api_key=apiKey, url=url)
         item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId)
         item_id = item['item_id']
-        for filename in os.listdir(self.outdir):
-            upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, filename)
-            filepath=os.path.join(self.outdir, filename)
-            pydas.communicator.perform_upload(upload_token, filename, itemid=item_id, filepath=filepath)
-        # set the output item as an output for the job
+        if out_file is not None:
+            # only upload this one file
+            upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, out_file)
+            filepath=os.path.join(self.outdir, out_file)
+            pydas.communicator.perform_upload(upload_token, out_file, itemid=item_id, filepath=filepath)
+        else:
+            for filename in os.listdir(self.outdir):
+                upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, filename)
+                filepath=os.path.join(self.outdir, filename)
+                pydas.communicator.perform_upload(upload_token, filename, itemid=item_id, filepath=filepath)
+            # set the output item as an output for the job
         method = 'midas.pyslicer.add.job.output.item'
         parameters = {}
         parameters['token'] = pydas.token
@@ -332,7 +348,7 @@ class SlicerPipeline():
             self.downloadInput()
             self.process() 
             self.uploadOutput()
-            self.removeTmpDir()
+            #self.removeTmpDir()
             self.reportStatus(self.event_pipelineend)
             # send pydas pipeline finished
             self.reportMidasStatus(self.midasstatus_done)
@@ -348,3 +364,4 @@ class SlicerPipeline():
             self.reportMidasStatus(self.midasstatus_exception, emsg)
             exit(1)
       
+

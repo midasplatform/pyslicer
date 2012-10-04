@@ -29,3 +29,11 @@ span#midas_pyslicer_jobcount_error {
 .midas_pyslicer_error {
     color: red !important;
 }
+
+#midas_pyslicer_jobstatus_header {
+    list-style: none;    
+}
+
+#midas_pyslicer_jobstatus_condition {
+    list-style: none;    
+}

@@ -81,7 +81,7 @@ class Pyslicer_Notification extends ApiEnabled_Notification
                     '</span><span id="midas_'.$this->moduleName.'_jobcount_started">' . $jobCounts['started'] .
                     '</span><span id="midas_'.$this->moduleName.'_jobcount_done">' . $jobCounts['done'] .
                     '</span><span id="midas_'.$this->moduleName.'_jobcount_error">' . $jobCounts['error'] . '</span>';
-      return array('Jobs '. $jobsCounts => array($moduleWebroot . '/process/status',  $baseURL . '/modules/'.$this->moduleName.'/public/images/slicer_icon16x16.png'));
+      return array('Jobs '. $jobsCounts => array($moduleWebroot . '/process/statuslist',  $baseURL . '/modules/'.$this->moduleName.'/public/images/slicer_icon16x16.png'));
       }
     else
       {
