@@ -53,7 +53,7 @@ if(isset($condition) && $condition != '')
   }
 
 
-$url = 'http://localhost:8880/slicerjob/status?jobid='. $this->job->getJobId();
+$url = 'http://localhost:8880/slicerjob/status?job_id='. $this->job->getJobId();
 $data = file_get_contents($url);
 $data = trim($data, '[]');
 $events = explode(',', $data);
