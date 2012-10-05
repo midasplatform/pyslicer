@@ -34,9 +34,8 @@ $(document).ready(function(){
             midas.showDialog('Browse for the Registration Moving Image');
 
             midas.pyslicer.index.itemSelectionCallback = function(name, movingId) {
-                console.log("movingSelected");
                 var redirectUrl = $('.webroot').val() + '/visualize/paraview/dual?left=' + fixedId;
-                redirectUrl += '&right=' + movingId + '&operations=pointMap&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.landmarkRegistration.js';
+                redirectUrl += '&right=' + movingId + '&operations=pointMap&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/visualize.landmarkRegistration.js';
                 window.location = redirectUrl;
             };
         };

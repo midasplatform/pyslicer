@@ -15,7 +15,7 @@ import slicer_utils
 
 class SlicerRegPipeline(SlicerPipeline):
 
-    def __init__(self, jobId, pydasParams, tmpDirRoot, fixedItemId, movingItemId, fixedFiducialsList, movingFiducialsList, transformType, outputFolderId, outputItemName):
+    def __init__(self, jobId, pydasParams, tmpDirRoot, fixedItemId, movingItemId, fixedFiducialsList, movingFiducialsList, transformType, outputFolderId, outputVolumeName, outputTransformName):
         SlicerPipeline.__init__(self, 'fiducialregistration', jobId, pydasParams, tmpDirRoot)
         self.fixedItemId = fixedItemId
         self.movingItemId = movingItemId
@@ -24,7 +24,8 @@ class SlicerRegPipeline(SlicerPipeline):
         self.movingFiducialsList = movingFiducialsList
         self.transformType = transformType
         self.outputFolderId = outputFolderId
-        self.outputItemName = outputItemName
+        self.outputVolumeName = outputVolumeName
+        self.outputTransformName = outputTransformName
 
     def downloadInputImpl(self):
         print "segmodeldownloadinputimpl"
@@ -74,14 +75,14 @@ class SlicerRegPipeline(SlicerPipeline):
         slicer_utils.run_fiducial_registration(fixedFiducialsList, movingFiducialsList, outputTransform, self.transformType)
         self.reportProcessStatus("Finished Registration")
 
-        self.transformed_volume = self.outputItemName + '.mha'
+        self.transformed_volume = self.outputVolumeName + '.mha'
         outPath = os.path.join(self.outdir, self.transformed_volume)
         # apply transform to moving image, then save volume
         movingVolume.ApplyTransformMatrix(outputTransform.GetMatrixTransformToParent())
         slicer_utils.write_storable_node(movingVolume, outPath)
         self.reportProcessStatus("Wrote Transformed Volume")
 
-        self.transform = self.outputItemName + '.tfm'
+        self.transform = self.outputTransformName + '.tfm'
         outPath = os.path.join(self.outdir, self.transform)
         slicer_utils.write_storable_node(outputTransform, outPath)
 
@@ -93,8 +94,9 @@ class SlicerRegPipeline(SlicerPipeline):
         pydas.login(email=email, api_key=apiKey, url=url)
         folder = pydas.communicator.create_folder(pydas.token, 'output_'+self.jobId, self.outputFolderId)
         folder_id = folder['folder_id'] 
-        item_id = self.uploadItem(self.transformed_volume, folder_id, self.transformed_volume)
-        item_id = self.uploadItem(self.transform, folder_id, self.transform)
+
+        item_id = self.uploadItem(self.outputVolumeName, folder_id, self.transformed_volume, item_description='output volume')
+        item_id = self.uploadItem(self.outputTransformName, folder_id, self.transform, item_description='output transform')
  
 
 
@@ -105,10 +107,10 @@ if __name__ == '__main__':
     arg_map = json.loads(json_args)
     #print arg_map
     pydasParams = (arg_map['email'][0], arg_map['apikey'][0], arg_map['url'][0])
-    (fixed_item_id, moving_item_id, fixed_fiducials, moving_fiducials, transform_type, output_folder_id, output_item_name) = (arg_map['fixed_item_id'][0], arg_map['moving_item_id'][0], json.loads(arg_map['fixed_fiducials'][0]), json.loads(arg_map['moving_fiducials'][0]),  arg_map['transform_type'][0],  arg_map['output_folder_id'][0],  arg_map['output_item_name'][0], ) 
+    (fixed_item_id, moving_item_id, fixed_fiducials, moving_fiducials, transform_type, output_folder_id, output_volume_name, output_transform_name) = (arg_map['fixed_item_id'][0], arg_map['moving_item_id'][0], json.loads(arg_map['fixed_fiducials'][0]), json.loads(arg_map['moving_fiducials'][0]),  arg_map['transform_type'][0],  arg_map['output_folder_id'][0],  arg_map['output_volume_name'][0], arg_map['output_transform_name'][0]) 
+
     print fixed_item_id, moving_item_id
-    rp = SlicerRegPipeline(jobId, pydasParams, tmpDirRoot, fixed_item_id, moving_item_id, fixed_fiducials, moving_fiducials, transform_type, output_folder_id, output_item_name)
+    rp = SlicerRegPipeline(jobId, pydasParams, tmpDirRoot, fixed_item_id, moving_item_id, fixed_fiducials, moving_fiducials, transform_type, output_folder_id, output_volume_name, output_transform_name)
     rp.execute()
 
 
-#    http://localhost:8880/slicerjob/init/?pipeline=registration&url=http://localhost/midas3&email=michael.grauer@kitware.com&apikey=dcc90e81da77d774bcaf44c4c1d9648c&fixed_item_id=1778&moving_item_id=1930&fixed_fiducials=[[-81,-107,90],[-129,-133.4,90],[-127.5,-155,90],[-179,-101,90],[-83.5,-164,90]]&moving_fiducials=[[-101,-107,90],[-149,-133.4,90],[-147.5,-155,90],[-199,-101,90],[-103.5,-164,90]]&transform_type=Rigid&output_folder_id=896&output_item_name=s1_transformed&job_id=90
