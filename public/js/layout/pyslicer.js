@@ -7,7 +7,7 @@ midas.pyslicer.delayMillis = 30000;
 $(document).ready(function()  {
 
     // start looping for updates
-    var t = setTimeout(midas.pyslicer.updateJobCounts, midas.pyslicer.delayMillis);
+    //var t = setTimeout(midas.pyslicer.updateJobCounts, midas.pyslicer.delayMillis);
 
 });
 

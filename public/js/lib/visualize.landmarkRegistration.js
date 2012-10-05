@@ -6,7 +6,7 @@ midas.visualize.processPointMapHandler = function () {
     $.each(midas.visualize.left.points, function(idx, point) {
         points.fixed.push([point.x, point.y, point.z]);
     });
-    $.each(midas.visualize.left.points, function(idx, point) {
+    $.each(midas.visualize.right.points, function(idx, point) {
         points.moving.push([point.x, point.y, point.z]);
     });
     $('div.MainDialog').dialog('close');
@@ -31,7 +31,6 @@ midas.visualize.processPointMapHandler = function () {
         args += '&moving_fiducials='+JSON.stringify(points.moving);
         args += '&output_item_name='+$('#outputVolumeName').val();
         args += '&transform_type=Rigid';
-        console.log(args);
 
         $('#processingPleaseWait').show();
         ajaxWebApi.ajax({

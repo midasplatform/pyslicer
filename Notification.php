@@ -17,7 +17,6 @@ class Pyslicer_Notification extends ApiEnabled_Notification
     $this->moduleWebroot = $fc->getBaseUrl().'/modules/'.$this->moduleName;
     $this->coreWebroot = $fc->getBaseUrl().'/core';
     $this->addCallBack('CALLBACK_CORE_GET_FOOTER_HEADER', 'getHeader');
-    $this->addCallBack('CALLBACK_CORE_ITEM_VIEW_ACTIONMENU', 'getItemMenuLink');
     $this->addCallBack('CALLBACK_CORE_GET_LEFT_LINKS', 'getLeftLink');
     $this->addCallBack('CALLBACK_CORE_GET_FOOTER_LAYOUT', 'getFooter');
     }
@@ -34,31 +33,6 @@ class Pyslicer_Notification extends ApiEnabled_Notification
     $footer = '<script type="text/javascript" src="'.Zend_Registry::get('webroot').'/modules/api/public/js/common/common.ajaxapi.js"></script>';
     $footer .= '<script type="text/javascript" src="'.Zend_Registry::get('webroot').'/modules/'.$this->moduleName.'/public/js/layout/'.$this->moduleName.'.js"></script>';
     return $footer;
-    }
-    
-    
-  /** Get the link to place in the item action menu */
-  public function getItemMenuLink($params)
-    {
-    $item = $params['item'];
-    $revisions = $item->getRevisions();
-    if(count($revisions) === 0)
-      {
-      return null;
-      }
-    $itemModel = MidasLoader::loadModel('Item');
-    if(isset($this->userSession->Dao))
-      {
-      $webroot = Zend_Controller_Front::getInstance()->getBaseUrl();
-      return '<li><a href="'.$webroot.'/visualize/paraview/slice?itemId='.$item->getKey().
-             '&operations=pointSelect&jsImports=/midas/modules/'.$this->moduleName.'/public/js/lib/visualize.pointSelect.js">'.
-             '<img alt="" src="'.$webroot.'/modules/'.$this->moduleName.'/public/images/slicer_icon16x16.png" /> '.
-             'Region Growing Segmentation</a></li>';
-      }
-    else
-      {
-      return null;  
-      }
     }
     
   /**
