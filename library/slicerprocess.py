@@ -121,7 +121,7 @@ class SlicerPipelineStatusTracker():
 
 
 class SlicerProcess(protocol.ProcessProtocol):
-    pipeline_scripts = {'segmentation' : 'seg_pipeline.py', 'fiducialregistration' : 'reg_pipeline.py'}
+    pipeline_scripts = {'segmentation' : 'seg_pipeline.py', 'registration' : 'reg_pipeline.py'}
 
 
 
@@ -268,13 +268,16 @@ class SlicerPipeline():
         return os.path.join(self.datadir, item['name'])
 
 
-    def uploadItem(self, itemName, outputFolderId, out_file=None):
+    def uploadItem(self, itemName, outputFolderId, out_file=None, item_description=None):
         # read everything in the outdir and upload it as a single item
         # create a new item
         # need a folder id
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
-        item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId)
+        if item_description is not None:
+            item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId, description=item_description)
+        else:
+            item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId)
         item_id = item['item_id']
         if out_file is not None:
             # only upload this one file
@@ -349,7 +352,7 @@ class SlicerPipeline():
             self.downloadInput()
             self.process() 
             self.uploadOutput()
-            #self.removeTmpDir()
+            self.removeTmpDir()
             self.reportStatus(self.event_pipelineend)
             # send pydas pipeline finished
             self.reportMidasStatus(self.midasstatus_done)
