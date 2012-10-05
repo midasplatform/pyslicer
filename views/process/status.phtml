@@ -52,8 +52,10 @@ if(isset($condition) && $condition != '')
   echo "</ul>";
   }
 
-
-$url = 'http://localhost:8880/slicerjob/status?job_id='. $this->job->getJobId();
+$settingModel = MidasLoader::loadModel('Setting');
+$twistedServerUrl = $settingModel->getValueByName('slicerProxyUrl', 'pyslicer');
+    
+$url = $twistedServerUrl . '/status?job_id='. $this->job->getJobId();
 $data = file_get_contents($url);
 $data = trim($data, '[]');
 $events = explode(',', $data);

@@ -142,9 +142,11 @@ class Pyslicer_ApiComponent extends AppComponent
     $jobModel->save($job);    
     
     // TODO store twisted server url in config
-    $twistedServerUrl = 'http://localhost:8880/';
+    $settingModel = MidasLoader::loadModel('Setting');
+    $twistedServerUrl = $settingModel->getValueByName('slicerProxyUrl', 'pyslicer');
+    
     // TODO switch to different pipeline types
-    $jobInitPath = "slicerjob/init/";
+    $jobInitPath = "/slicerjob/init/";
     
     $midasPath = Zend_Registry::get('webroot');
     $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
@@ -301,8 +303,9 @@ class Pyslicer_ApiComponent extends AppComponent
   protected function _constructJobCreationUrl($userDao, $script, $job, $params)
     {
     // TODO store twisted server url in config
-    $twistedServerUrl = 'http://localhost:8880/';
-    $jobInitPath = "slicerjob/init/";
+    $settingModel = MidasLoader::loadModel('Setting');
+    $twistedServerUrl = $settingModel->getValueByName('slicerProxyUrl', 'pyslicer');
+    $jobInitPath = "/slicerjob/init/";
     // TODO probably a security hole to put the email and api key in the url
     // TODO hardcoded seed
     list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);    
