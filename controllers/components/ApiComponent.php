@@ -203,7 +203,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }*/
     else
       {
-      $redirectURL = $midasUrl . '/pyslicer/process/status';
+      $redirectURL = $midasUrl . '/pyslicer/process/status?jobId='.$job->getJobId();
       return array('redirect' => $redirectURL);
       //throw new Zend_Exception("No output_item_id supplied, server says: ". $data);
       }
@@ -401,7 +401,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     else
       {
-      $redirectURL = $midasUrl . '/pyslicer/process/status';
+      $redirectURL = $midasUrl . '/pyslicer/process/status?jobId='.$job->getJobId();
       return array('redirect' => $redirectURL);
       }
     }
