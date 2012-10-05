@@ -33,6 +33,7 @@ class Pyslicer_IndexController extends Pyslicer_AppController
    */
   function indexAction()
     {
+    $this->view->header = "Select from the available pipelines";
     }
 
 

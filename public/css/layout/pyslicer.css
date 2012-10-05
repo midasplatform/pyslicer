@@ -37,3 +37,7 @@ span#midas_pyslicer_jobcount_error {
 #midas_pyslicer_jobstatus_condition {
     list-style: none;    
 }
+
+#midas_pyslicer_pipelines {
+    list-style: none;    
+}
