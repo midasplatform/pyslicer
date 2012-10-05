@@ -37,9 +37,11 @@ class SlicerjobStatus(Resource):
 
     def render_GET(self, request):
         if 'job_id' in request.args:
-            return str(self.jobManager.getStatus(jobId=request.args['jobid'][0]))
+            return str(self.jobManager.getStatus(jobId=request.args['job_id'][0]))
         else:
-            return str(self.jobManager.getStatus())
+            return ''
+#        else:
+#            return str(self.jobManager.getStatus())
 
 
 

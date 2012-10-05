@@ -45,10 +45,11 @@ class SlicerProcessJobManager():
         if jobId is not None and jobId in self.jobs:
             status = str(jobId) +":"+ str(sorted(self.jobs[jobId].values(), key=lambda event: int(event.eventId)))
         else:
-            status = ''
-            for jobId, jobEvents in self.jobs.items():
-                jobEvents = [str(event) for event in sorted(jobEvents.values(), key=lambda event: int(event.eventId))]
-                status = str(jobEvents)
+            #status = ''
+            #for jobId, jobEvents in self.jobs.items():
+            #    jobEvents = [str(event) for event in sorted(jobEvents.values(), key=lambda event: int(event.eventId))]
+            #    status = str(jobEvents)
+            status = ""
         return status
 
 
