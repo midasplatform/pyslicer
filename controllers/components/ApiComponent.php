@@ -328,7 +328,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     
     $url = $twistedServerUrl . $jobInitPath . '?' . $requestParams;
-    return $url;
+    return array($url, $midasUrl);
     }
    
     
@@ -391,7 +391,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $job = $this->_createJob($userDao, $script, &$params, $inputItems,
                              isset($args['job_name']) ? $args['job_name'] : false);
     
-    $jobCreationUrl = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
+    list($jobCreationUrl, $midasUrl) = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
     
     $data = file_get_contents($jobCreationUrl);  
    
