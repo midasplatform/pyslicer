@@ -34,57 +34,81 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
           MIDAS_REMOTEPROCESSING_STATUS_STARTED => 'midas_pyslicer_started',
           MIDAS_REMOTEPROCESSING_STATUS_DONE => 'midas_pyslicer_done',
           MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION => 'midas_pyslicer_error');
+  
+  protected $pipelines = array(
+        MIDAS_PYSLICER_SEGMENTATION_PIPELINE => array(
+           MIDAS_PYSLICER_EXPECTED_INPUTS => MIDAS_PYSLICER_SEGMENTATION_INPUT_COUNT,
+           MIDAS_PYSLICER_EXPECTED_OUTPUTS => MIDAS_PYSLICER_SEGMENTATION_OUTPUT_COUNT,
+           MIDAS_PYSLICER_INPUT_GENERATOR => 'segmentationInputLinks',
+           MIDAS_PYSLICER_OUTPUT_GENERATOR => 'segmentationOutputLinks'),
+        MIDAS_PYSLICER_REGISTRATION_PIPELINE => array(
+           MIDAS_PYSLICER_EXPECTED_INPUTS => MIDAS_PYSLICER_REGISTRATION_INPUT_COUNT,
+           MIDAS_PYSLICER_EXPECTED_OUTPUTS => MIDAS_PYSLICER_REGISTRATION_OUTPUT_COUNT,
+           MIDAS_PYSLICER_INPUT_GENERATOR => 'registrationInputLinks',
+           MIDAS_PYSLICER_OUTPUT_GENERATOR => 'registrationOutputLinks'));
+  
   /** init method */
   function init()
     {
     }
-   
 
-  function segmentationInputsAndOutputs($job, $inputs, $outputs)// getServerURL(), $midasPath)
+    
+  function segmentationInputLinks($job, $inputs, $outputs, $midasPath)
     {
-    $inputLinks = array();
-    $outputLinks = array();
-    $midasPath = Zend_Registry::get('webroot');
-    if(sizeof($inputs) == 0)
+    $inputItemId = $inputs[0]->getItemId();
+    $inputLink = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId;
+    $inputLinkText = 'View Input';
+    return array( array ('text' => $inputLinkText, 'url' => $inputLink));
+    }
+
+  function segmentationOutputLinks($job, $inputs, $outputs, $midasPath)
+    {
+    $inputItemId = $inputs[0]->getItemId();
+    $outputItemId = $outputs[0]->getItemId();
+    $outputLink = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports='.$midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
+    $outputLinkText = 'View Output';  
+    return array( array ('text' => $outputLinkText, 'url' => $outputLink));
+    }
+  
+  function registrationInputLinks($job, $inputs, $outputs, $midasPath)
+    {
+    $fixedItemId = $inputs[0]->getItemId();
+    $movingItemId = $inputs[1]->getItemId();
+    $inputLink = $midasPath . '/visualize/paraview/dual?left='.$fixedItemId;
+    $inputLink .= '&right=' . $movingItemId;
+    $inputLinkText = 'View Input';
+    return array( array ('text' => $inputLinkText, 'url' => $inputLink));
+    }
+
+  function registrationOutputLinks($job, $inputs, $outputs, $midasPath)
+    {
+    $params = JsonComponent::decode($job->getParams());
+    $fixedItemId = $params['fixed_item_id'];
+    
+    // we need to get the output volume, but there are two outputs
+    // we know the fact that the output volume is created first
+    // and the outputs here are returned in reverse order of creation, but
+    // those seem like brittle facts to rely on.
+    // it seems better to check the description
+    $outputVolumeId = -1;
+    foreach($outputs as $output)
       {
-      $inputLink = '';
-      $inputLinkText = 'Missing Input';
-      }
-    else
-      {
-      $inputLink = 'TODO';
-      $inputLinkText = 'View Input';
-      }
-    $inputLinks[] = array('text' => $inputLinkText, 'url' => $inputLink);
-    if($job->getStatus() == MIDAS_REMOTEPROCESSING_STATUS_DONE)
-      {
-      if(sizeof($outputs) == 0)
+      if($output->getDescription() == MIDAS_PYSLICER_REGISTRATION_OUTPUT_VOLUME_DESCRIPTION)
         {
-        $outputLink = '';
-        $outputLinkText = 'Error: missing output';
+        $outputVolumeId = $output->getItemId();
         }
-      else
-        {
-        if(sizeof($inputs) == 0)
-          {
-          $outputLink = '';
-          $outputLinkText = 'Error: missing input';
-          }
-        else
-          {
-          $inputItemId = $inputs[0]->getItemId();
-          $outputItemId = $outputs[0]->getItemId();
-          $outputLink = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.meshView.js';
-          $outputLinkText = 'View Output';
-          }
-        }
-      $outputLinks[] = array('text' => $outputLinkText, 'url' => $outputLink);
       }
-    return array('inputs' => $inputLinks, 'outputs' => $outputLinks);
+    
+    $outputLink = $midasPath . '/visualize/paraview/dual?left='.$fixedItemId;
+    $outputLink .= '&right=' . $outputVolumeId;
+    $outputLink .= '&jsImports=' . $midasPath.'/modules/pyslicer/public/js/lib/visualize.regOutput.js';
+    $outputLinkText = 'View Output';  
+    return array( array ('text' => $outputLinkText, 'url' => $outputLink));
     }
     
   function resolveInputsAndOutputs($job)
     {
+    $midasPath = Zend_Registry::get('webroot');  
     $inputs = array();
     $outputs = array();
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
@@ -100,13 +124,43 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
         $outputs[] = $item;
         }
       }
-
-    $insAndOuts = array();
-    if($job->getScript() == 'segmentation')
+    
+    // generate inputs
+    $expectedInputs = $this->pipelines[$job->getScript()][MIDAS_PYSLICER_EXPECTED_INPUTS];
+    $inputGenerator = $this->pipelines[$job->getScript()][MIDAS_PYSLICER_INPUT_GENERATOR];
+    $inputLinks = array();
+    if(sizeof($inputs) < $expectedInputs)
       {
-      $insAndOuts =$this->segmentationInputsAndOutputs($job, $inputs, $outputs);// getServerURL(), $midasPath)
+      $inputLinks = $this->missingInputs;
       }
-    return $insAndOuts;  
+    else
+      {
+      $inputLinks = call_user_func_array(array($this, $inputGenerator), array($job, $inputs, $outputs, $midasPath));
+      }
+    
+    // generate outputs if done
+    $expectedOutputs = $this->pipelines[$job->getScript()][MIDAS_PYSLICER_EXPECTED_OUTPUTS];
+    $outputGenerator = $this->pipelines[$job->getScript()][MIDAS_PYSLICER_OUTPUT_GENERATOR];
+    $outputLinks = array();
+    if($job->getStatus() == MIDAS_REMOTEPROCESSING_STATUS_DONE)
+      {
+      if(sizeof($outputs) < $expectedOutputs)
+        {
+        $outputLinks = $this->missingOutputs;
+        }
+      else
+        {
+        if(sizeof($inputs) < $expectedInputs)
+          {
+          $outputLinks = $this->missingInputs;  
+          }
+        else
+          {
+          $outputLinks = call_user_func_array(array($this, $outputGenerator), array($job, $inputs, $outputs, $midasPath));
+          }
+        }
+      }
+    return array('inputs' => $inputLinks, 'outputs' => $outputLinks);
     }
     
   function statuslistAction()
