@@ -10,7 +10,7 @@ $(document).ready(function(){
 
         midas.pyslicer.index.itemSelectionCallback = function(name, id) {
             var redirectUrl = $('.webroot').val() + '/visualize/paraview/volume?itemId=' + id;
-            window.location.replace(redirectUrl);
+            window.location = redirectUrl;
         };
     });
 
@@ -21,7 +21,7 @@ $(document).ready(function(){
         midas.pyslicer.index.itemSelectionCallback = function(name, id) {
             var redirectUrl = $('.webroot').val() + '/visualize/paraview/slice?itemId=' + id;
             redirectUrl += '&operations=pointSelect&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/visualize.pointSelect.js';
-            window.location.replace(redirectUrl);
+            window.location = redirectUrl;
         };
     });
 
@@ -37,7 +37,7 @@ $(document).ready(function(){
                 console.log("movingSelected");
                 var redirectUrl = $('.webroot').val() + '/visualize/paraview/dual?left=' + fixedId;
                 redirectUrl += '&right=' + movingId + '&operations=pointMap&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.landmarkRegistration.js';
-                window.location.replace(redirectUrl);
+                window.location = redirectUrl;
             };
         };
     });
