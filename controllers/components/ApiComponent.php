@@ -163,7 +163,7 @@ class Pyslicer_ApiComponent extends AppComponent
                              'coords' => $seed[0] . ',' . $seed[1] . ',' . $seed[2],
                              'outputfolderid' => $parentFolderId,
                              'outputitemname' => $outputItemName,
-                             'jobid' => $job->getKey());
+                             'job_id' => $job->getKey());
     $requestParams = "";
     $ind = 0;
     foreach ($slicerjobParams as $name => $value)
