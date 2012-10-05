@@ -44,6 +44,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     {
     $inputLinks = array();
     $outputLinks = array();
+    $midasPath = Zend_Registry::get('webroot');
     if(sizeof($inputs) == 0)
       {
       $inputLink = '';
@@ -73,7 +74,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
           {
           $inputItemId = $inputs[0]->getItemId();
           $outputItemId = $outputs[0]->getItemId();
-          $outputLink = $this->getServerURL() . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.meshView.js';
+          $outputLink = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports=/midas/modules/pyslicer/public/js/lib/visualize.meshView.js';
           $outputLinkText = 'View Output';
           }
         }
