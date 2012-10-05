@@ -9,15 +9,16 @@ This software is distributed WITHOUT ANY WARRANTY; without even
 the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE.  See the above copyright notices for more information.
 =========================================================================*/
+$this->headScript()->appendFile($this->moduleWebroot . '/public/js/index/pyslicer.index.js');
 ?>
-<h2>Available Slicer Pipelines</h2>
 <?php
-  $pipelines = array('volumerendering' => 'Volume Rendering',
-                     'segmentation' => 'Segmentation',
-                     'registration' => 'Registration');
-  foreach($pipelines as $pipeline => $label)
-    {
-    echo '<a href="'.$this->webroot . '/pyslicer/pipeline/'.$pipeline.'">'.$label.'</a>';  
-    }
+           
+    
+  echo '<ul id="midas_pyslicer_pipelines">';
+  echo '<li><a href="javascript:;" class="volumeRendering" ><img alt="" src=""/>Volume Rendering</a></li>';
+  echo '<li><a href="javascript:;" class="segmentation" ><img alt="" src=""/>Segmentation</a></li>';
+  echo '<li><a href="javascript:;" class="registration" ><img alt="" src=""/>Registration</a></li>';
+  echo "</ul>";
+    
 ?>
 
