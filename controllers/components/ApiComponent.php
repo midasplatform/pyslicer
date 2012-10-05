@@ -269,7 +269,7 @@ class Pyslicer_ApiComponent extends AppComponent
   // output_item_name will be set in job creation if it does not exist
   // job_name will be set in job creation if it does not exist
   // params will be modified if needed to set output_item_name
-  protected function _createJob($userDao, $script, $params, $inputItems, $jobName=false)
+  protected function _createJob($userDao, $script, $params, $inputItems, $synthesizedItemNames, $jobName=false)
     { 
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
     $job = MidasLoader::newDao('JobDao', 'remoteprocessing');
@@ -288,13 +288,19 @@ class Pyslicer_ApiComponent extends AppComponent
       $jobName = 'Slicer Job ' . $job->getJobId();
       }
     $job->setName($jobName);
-    if(!$params['output_item_name'])
+    
+    // synthesize names for any params if needed
+    foreach($synthesizedItemNames as $id => $nameSuffix)
       {
-      $jobName = $job->getName();
-      $jobName = str_replace(" ", "_", $jobName);
-      $outputItemName = $jobName . "_output";
-      $params['output_item_name'] = $outputItemName;
+      if(!$params[$id])
+        {
+        $jobName = $job->getName();
+        $jobName = str_replace(" ", "_", $jobName);
+        $outputItemName = $jobName . $nameSuffix;
+        $params[$id] = $outputItemName;
+        }
       }
+    
     $job->setParams(JsonComponent::encode($params));
     $jobModel->save($job);    
     return $job;
@@ -348,8 +354,10 @@ class Pyslicer_ApiComponent extends AppComponent
    * @param transform_type one of [Rigid|Translation|Similarity]
    * @param output_folder_id (optional) The id of the folder to create an output
      folder underneath.  If not supplied the user's Private folder will be used.
-   * @param output_item_name (optional) The name of the created output item.  If
-     not supplied a name like "Slicer_Job_X_output will be created.
+   * @param output_volume_name (optional) The name of the created output volume 
+     item.  If not supplied a name like "Slicer_Job_X_output_volume will be created.
+   * @param output_transform_name (optional) The name of the created output transform 
+     item.  If not supplied a name like "Slicer_Job_X_output_transform will be created.
    * @param job_name (optional) The name of the processing job, if not supplied,
      will be given a name like "Slicer Job X" where x is the job id.
    * @return redirect => redirectURL.
@@ -377,18 +385,22 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     
     $inputItems = array($fixedItem, $movingItem);
-    $script = 'fiducialregistration';
+    $script = MIDAS_PYSLICER_REGISTRATION_PIPELINE;
     $params = array('fixed_item_id' => $fixedItem->getItemId(),
                     'moving_item_id' => $movingItem->getItemId(),
                     'fixed_fiducials' => JsonComponent::encode($fixedFiducials),
                     'moving_fiducials' => JsonComponent::encode($movingFiducials),
                     'transform_type' => $transformType,
                     'output_folder_id' => $outputFolderId,
-                    'output_item_name' => isset($args['output_item_name']) ? $args['output_item_name'] : false);
-  
-    // output_item_name will be set in job creation if it does not exist
+                    'output_volume_name' => isset($args['output_volume_name']) ? $args['output_volume_name'] : false,
+                    'output_transform_name' => isset($args['output_transform_name']) ? $args['output_transform_name'] : false);
+    $synthesizedItemNames = array('output_volume_name' => '_output_volume',
+                                  'output_transform_name' => '_output_transform');
+    
+    // output_volume_name and output_transform_name will be set in job creation 
+    // if they do not exist
     // job_name will be set in job creation if it does not exist
-    $job = $this->_createJob($userDao, $script, &$params, $inputItems,
+    $job = $this->_createJob($userDao, $script, &$params, $inputItems, $synthesizedItemNames,
                              isset($args['job_name']) ? $args['job_name'] : false);
     
     list($jobCreationUrl, $midasUrl) = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
