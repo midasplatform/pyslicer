@@ -171,7 +171,8 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
       $jobs = $jobModel->getByUser($this->userSession->Dao);
       
       $midasPath = Zend_Registry::get('webroot');
-      $columnsHeaders = array('name' => 'Name', 'script' => 'Job Type', 'params' => 'Params', 'creation_date' => 'Creation Date', 'status' => 'Status', 'output' => 'Output');
+//      $columnsHeaders = array('name' => 'Name', 'script' => 'Job Type', 'params' => 'Params', 'creation_date' => 'Creation Date', 'status' => 'Status', 'output' => 'Output');
+      $columnsHeaders = array('name' => 'Name', 'script' => 'Job Type', 'params' => 'Params', 'creation_date' => 'Creation Date', 'status' => 'Status');
       $jobsRows = array();
       $this->view->columnHeaders = $columnsHeaders;
       foreach($jobs as $job)
@@ -190,7 +191,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
             $jobRow['status_string'] = $this->statusStrings[$status];
             $jobRow['status_class'] = $this->statusClasses[$status];
             }
-          elseif($column === 'output')
+          /*elseif($column === 'output')
             {
             if($job->getStatus() == MIDAS_REMOTEPROCESSING_STATUS_DONE)
               {
@@ -201,6 +202,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
                 {
                 $inputItem = false;
                 $outputItem = false;
+                $inputItemId = false;
                 if($item->getType() == MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT)
                   {
                   $inputItemId = $item->getItemId();  
@@ -238,7 +240,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
               $jobRow['output_url'] = false;
               $jobRow['output_qtip'] = false;
               }
-            }
+            }*/
           else
             {
             $jobRow[$column] = $job->get($column);
