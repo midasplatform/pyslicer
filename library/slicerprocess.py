@@ -33,8 +33,9 @@ class SlicerProcessJobManager():
 
 
     def processEvent(self, event):
-        jobEvents = self.jobs[str(event.jobId)]
-        jobEvents[event.eventId] = event
+        pass
+        #jobEvents = self.jobs[str(event.jobId)]
+        #jobEvents[event.eventId] = event
 
 
        
@@ -56,8 +57,8 @@ class SlicerProcessJobManager():
 
 
 class SlicerProcessStatusEvent():
-    statuseventpattern = 'status job=%s eventid=%s timestamp=%s eventType=%s'
-    statuseventmessagepattern = statuseventpattern + ' message=%s'
+    statuseventpattern = 'status&remoteprocessing_job_id=%s&event_id=%s&timestamp=%s&event_type=%s'
+    statuseventmessagepattern = statuseventpattern + '&message=%s'
 
     def __init__(self, jobId, eventId, timestamp, eventType, message=None):
         self.jobId = str(jobId)
@@ -65,6 +66,7 @@ class SlicerProcessStatusEvent():
         self.timestamp = str(timestamp)
         self.eventType = eventType
         self.message = message
+        self.jobstatus_id = None
 
     def __repr__(self):
         if self.message is not None:
@@ -226,6 +228,53 @@ class SlicerPipeline():
         #TODO something better with logging
         logging.basicConfig(level=logging.WARNING)
         self.log = logging.getLogger('example')
+        self.register_events()
+
+    def create_event(self, event_type, message=None):
+        event_id = self.eventIdCounter
+        self.eventIdCounter = self.eventIdCounter + 1
+        timestamp = 0
+        event = SlicerProcessStatusEvent(self.jobId, event_id, timestamp, event_type, message)
+        return event
+
+    def create_process_event(self, message):
+        return self.create_event(self.event_process, message)
+
+    def define_events(self):
+        self.events_map = {}
+        events = [self.create_event(event_type) for event_type in [self.event_pipelinestart, self.event_downloadinput]]
+        events = events + self.define_process_events()
+        events = events + [self.create_event(event_type) for event_type in [self.event_uploadoutput, self.event_pipelineend]]
+        for event in events:
+            self.events_map[event.eventId] = event
+        # then when it is their time to nofify, call notify passing in jobstatu_id and timestamp
+        # need an imple method for subclasses to list their process events
+        # maybe a map of event types to event, then a submap for process events?
+        # somehow i need to keep up with all these events here
+        # and maybe there is no reason to print them in the tracker anymore 
+
+    def register_events(self):
+        # get all the events, register them with the midas server
+        self.define_events()
+        events = self.events_map.values()
+        method = 'midas.pyslicer.add.jobstatuses'
+        parameters = {}
+        json_events = json.dumps([str(event) for event in events])
+        print json_events
+        (email, apiKey, url) = self.pydasParams
+        pydas.login(email=email, api_key=apiKey, url=url)
+        parameters['token'] = pydas.token
+        parameters['events'] = json_events
+        event_id_to_jobstatus_id = pydas.communicator.request(method, parameters) 
+        for (event_id, jobstatus_id) in event_id_to_jobstatus_id.items():
+            event = self.events_map[event_id]
+            event.jobstatus_id = jobstatus_id
+
+
+
+    def define_process_events(self):
+        # should be overwritten in the subclass
+        return []
 
     def createTmpDir(self):
         self.tmpdirpath = ('%s_%s_tmpdir') % (self.jobId, self.pipelineName)
@@ -301,19 +350,30 @@ class SlicerPipeline():
 
 
     def process(self):
-        self.reportStatus(self.event_process)
         self.processImpl()        
  
     def processImpl(self):
         pass
 
     def reportStatus(self, eventType, message=None):
-        eventId = self.eventIdCounter
-        self.eventIdCounter = self.eventIdCounter + 1
+        # find the event
+        match = None
+        for event in self.events_map.values():
+            if event.eventType == eventType and event.message == message:
+                match = event
+        if match is None:
+            print 'reportStatus',    eventType, message
+            print "NO MATCH"
+            exit(1)
         import time
         timestamp = time.time()
-        event = SlicerProcessStatusEvent(self.jobId, eventId, timestamp, eventType, message)
-        self.tracker.reportStatus(event)
+        match.timestamp = timestamp
+        method = 'midas.pyslicer.notify.jobstatus'
+        parameters = {}
+        parameters['token'] = pydas.token
+        parameters['jobstatus_id'] = match.jobstatus_id
+        parameters['notify_date'] = timestamp
+        pydas.communicator.request(method, parameters) 
 
 
     def reportProcessStatus(self, message=None):
@@ -332,7 +392,7 @@ class SlicerPipeline():
         # TODO add condition to api call 
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
-        method = 'midas.pyslicer.update.job.status'
+        method = 'midas.pyslicer.update.job'
         parameters = {}
         parameters['token'] = pydas.token
         parameters['job_id'] = self.jobId
