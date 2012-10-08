@@ -12,6 +12,12 @@ import pydas
 
 
 class SlicerSegPipeline(SlicerPipeline):
+    loaded_input_volume = "Loaded Input Volume"
+    started_segmentation = "Starting Segmentation"
+    finished_segmentation = "Finished Segmentation"
+    started_modelmaker = "Starting Modelmaker"
+    finished_modelmaker = "Finished Modelmaker"
+    wrote_model_output = "Wrote Model Output"
 
     def __init__(self, jobId, pydasParams, tmpDirRoot, itemId, seed, outputItemName, outputFolderId ):
         SlicerPipeline.__init__(self, 'segmentationmodel', jobId, pydasParams, tmpDirRoot)
@@ -21,11 +27,17 @@ class SlicerSegPipeline(SlicerPipeline):
         self.outputFolderId = outputFolderId
 
     def downloadInputImpl(self):
-        #print "segmodeldownloadinputimpl"
+        print "segmodeldownloadinputimpl"
         self.headerFile = self.downloadItem(self.itemId)
+
+    def define_process_events(self):
+        process_events = [self.loaded_input_volume, self.started_segmentation, self.finished_segmentation, self.started_modelmaker, self.finished_modelmaker, self.wrote_model_output]
+        process_events = [self.create_process_event(event_type) for event_type in process_events]
+        print process_events
+        return process_events
    
     def processImpl(self):
-        #print "segmodelprocessimpl"
+        print "segmodelprocessimpl"
         # take first two coords and multiply by -1
         # TODO something much more systematic dealing with coords
         (x, y, z) = [float(coord) for coord in self.seed.split(',')]
@@ -36,7 +48,7 @@ class SlicerSegPipeline(SlicerPipeline):
         outPath = os.path.join(self.outdir, outFile)
 
         (status, inputVolume) = slicer.util.loadVolume(self.headerFile, returnNode=True)
-        self.reportProcessStatus("Loaded Input Volume")
+        self.reportProcessStatus(self.loaded_input_volume)
 
         outVolume = slicer.vtkMRMLScalarVolumeNode()
         slicer.mrmlScene.AddNode(outVolume)
@@ -46,20 +58,20 @@ class SlicerSegPipeline(SlicerPipeline):
         fiducialNode.Initialize(slicer.mrmlScene)
         fiducialsList = getNode('Fiducials List')
         params = {'inputVolume': inputVolume.GetID(), 'outputVolume': outVolume.GetID(), 'seed' : fiducialsList.GetID(), 'iterations' : 6} 
-        self.reportProcessStatus("Starting Segmentation")
+        self.reportProcessStatus(self.started_segmentation)
         cliNode = slicer.cli.run(slicer.modules.simpleregiongrowingsegmentation,None, params , wait_for_completion=True)
         #from time import sleep
         #sleep(3)
-        self.reportProcessStatus("Finished Segmentation")
+        self.reportProcessStatus(self.finished_segmentation)
 
         # make a model, only param is name of output file
         modelmaker = slicer.modules.modelmaker
         mhn = slicer.vtkMRMLModelHierarchyNode()
         slicer.mrmlScene.AddNode(mhn)
         parameters = {'InputVolume': outVolume.GetID(), 'ModelSceneFile': mhn.GetID()}
-        self.reportProcessStatus("Starting Modelmaker")
+        self.reportProcessStatus(self.started_modelmaker)
         cliModelNode = slicer.cli.run(modelmaker, None, parameters, wait_for_completion=True)
-        self.reportProcessStatus("Finished Modelmaker")
+        self.reportProcessStatus(self.finished_modelmaker)
 
         # output the model
         # TODO change to method without memory leaks
@@ -70,7 +82,7 @@ class SlicerSegPipeline(SlicerPipeline):
         modelStorage.WriteData(outputModelNode)
         self.outFile = outFile
         #sleep(3)
-        self.reportProcessStatus("Wrote Model Output")
+        self.reportProcessStatus(self.wrote_model_output)
 
 #TODO metadata
 # Visualize DiffuseColor 1.0,0.0,0.0
@@ -99,10 +111,6 @@ class SlicerSegPipeline(SlicerPipeline):
         print parameters
         pydas.communicator.request(method, parameters) 
 
-    def process(self):
-        self.reportStatus(self.event_process)
-        self.processImpl()        
-
 
 
 
@@ -115,3 +123,5 @@ if __name__ == '__main__':
     (input_item_id, coords, output_item_name, output_folder_id) = (arg_map['inputitemid'][0], arg_map['coords'][0], arg_map['outputitemname'][0], arg_map['outputfolderid'][0], ) 
     sp = SlicerSegPipeline(jobId, pydasParams, tmpDirRoot, input_item_id, coords, output_item_name, output_folder_id)
     sp.execute()
+
+    #    http://localhost:8880/slicerjob/init/?pipeline=segmentation&job_id=90&url=http://localhost/midas3&email=michael.grauer@kitware.com&apikey=dcc90e81da77d774bcaf44c4c1d9648c&inputitemid=1778&outputitemname=myseg&outputfolderid=896&coords=93,82,90

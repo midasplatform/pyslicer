@@ -460,7 +460,7 @@ class Pyslicer_ApiComponent extends AppComponent
      only used for exceptions, status=3
    * @return array('success' => 'true') if successful.
    */
-  public function updateJobStatus($args)
+  public function updateJob($args)
     {
     $this->_checkKeys(array('job_id', 'status'), $args);    
     $userDao = $this->_getUser($args);
@@ -481,7 +481,6 @@ class Pyslicer_ApiComponent extends AppComponent
       throw new Exception('Only the job owner can update its status', MIDAS_PYSLICER_INVALID_POLICY);
       }
 
-      
     $status = $args['status'];
     $job->setStatus($status);
 
@@ -494,6 +493,135 @@ class Pyslicer_ApiComponent extends AppComponent
     
     return array('success' => 'true');
     }
+    
+  /**
+   * notify a jobstatus that it has occurred
+   * @param jobstatus_id the id of the jobstatus to update
+   * @param notify_date the unix timestamp for the event
+   * @return array('success' => 'true') if successful.
+   */
+  public function notifyJobstatus($args)
+    {
+    $this->_checkKeys(array('jobstatus_id', 'notify_date'), $args);    
+    $userDao = $this->_getUser($args);
+    if(!$userDao)
+      {
+      throw new Exception('Anonymous users may not notify jobstatus', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    $jobstatusModel = MidasLoader::loadModel('Jobstatus', 'pyslicer');
+    $jobstatus = $jobstatusModel->load($args['jobstatus_id']);
+    if($jobstatus === false)
+      {
+      throw new Zend_Exception('This jobstatus does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+
+    $job = $jobstatus->getJob();    
+    if($job->getCreatorId() != $userDao->getUserId())
+      {
+      throw new Exception('Only the job owner can update an associated jobstatus', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+    
+    $notifyDate = date('Y-m-d H:i:s', $args['notify_date']);
+    $jobstatus->setNotifyDate($notifyDate);  
+    $jobstatusModel->save($jobstatus);      
+      
+    return array('success' => 'true');
+    }
+    
+    
+  /**
+   * add a json encoded list of eventual events, that have not yet
+   * occurred, will create jobstatus for these and return an array
+   * mapping event_id to jobstatus_id, all of these events should have
+   * the same value for remoteprocessing_job_id, that is, they should
+   * all be part of the same job.
+   * @param events json encoded list of events, all with the same remoteprocessing_job_id
+   * @return array (event_id => jobstatus_id) if successful.
+   */
+  public function addJobstatuses($args)
+    {
+    $this->_checkKeys(array('events'), $args);    
+    $userDao = $this->_getUser($args);
+    if(!$userDao)
+      {
+      throw new Exception('Anonymous users may not add jobstatuses', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
+    $jobstatusModel = MidasLoader::loadModel('Jobstatus', 'pyslicer');
+    
+    $events = JsonComponent::decode($args['events']);
+    $eventIdsToJobstatusIds = array();
+    foreach($events as $event)
+      {
+      $jobstatus = MidasLoader::newDao('JobstatusDao', 'pyslicer');
+      $eventParts = explode('&', $event);
+      foreach($eventParts as $part)
+        {
+        $property = explode('=', $part);
+        if(sizeof($property) == 2)
+          {
+          // ignore timestamp as we are just adding eventual events here
+          $name = $property[0];
+          $value = $property[1];
+          if($name != 'timestamp')
+            {
+            $jobstatus->set($property[0], $property[1]);  
+            }
+          }
+        }
+      // before saving the jobstatus, ensure that the job is valid
+      // and the user is the owner
+      $job = $jobModel->load($jobstatus->getRemoteprocessingJobId());
+      if($job === false)
+        {
+        throw new Zend_Exception('Job '.$jobstatus->getRemoteprocessingJobId().' does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+        }
+      if($job->getCreatorId() != $userDao->getUserId())
+        {
+        throw new Exception('Only the job owner can update its status', MIDAS_PYSLICER_INVALID_POLICY);
+        }
+      $jobstatusModel->save($jobstatus);      
+      $eventIdsToJobstatusIds[$jobstatus->getEventId()] = $jobstatus->getJobstatusId();
+      }
+    return $eventIdsToJobstatusIds;
+    }
+    
+  /**
+   * will return a job object for a job_id with the current status,
+   * along with any related jobstatus objects for that job.
+   * @param job_id the id of the job to query status for.
+   * @return array ('job' => the job object, 'jobstatuses' => the array of jobstatus objects)
+   */
+  public function getJobstatus($args)
+    {
+    $this->_checkKeys(array('job_id'), $args);    
+    $userDao = $this->_getUser($args);
+    if(!$userDao)
+      {
+      throw new Exception('Anonymous users may not get job status', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
+    $jobstatusModel = MidasLoader::loadModel('Jobstatus', 'pyslicer');
+
+    $job = $jobModel->load($args['job_id']);
+    if($job === false)
+      {
+      throw new Zend_Exception('Job '.$args['job_id'].' does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+    if($job->getCreatorId() != $userDao->getUserId())
+      {
+      throw new Exception('Only the job owner can query its status', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    // get the status details
+    $jobstatuses = $jobstatusModel->getForJob($job);
+    
+    return array('job' => $job, 'jobstatuses' => $jobstatuses);  
+    }
+    
     
 
   /**

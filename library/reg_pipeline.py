@@ -14,6 +14,10 @@ import slicer_utils
 
 
 class SlicerRegPipeline(SlicerPipeline):
+    loaded_input_volumes = "Loaded Input Volumes"
+    finished_registration = "Finished Registration"
+    wrote_transformed_volume = "Wrote Transformed Volume"
+    wrote_transform = "Wrote Transform"
 
     def __init__(self, jobId, pydasParams, tmpDirRoot, fixedItemId, movingItemId, fixedFiducialsList, movingFiducialsList, transformType, outputFolderId, outputVolumeName, outputTransformName):
         SlicerPipeline.__init__(self, 'fiducialregistration', jobId, pydasParams, tmpDirRoot)
@@ -26,6 +30,13 @@ class SlicerRegPipeline(SlicerPipeline):
         self.outputFolderId = outputFolderId
         self.outputVolumeName = outputVolumeName
         self.outputTransformName = outputTransformName
+
+    def define_process_events(self):
+        process_events = [self.loaded_input_volumes, self.finished_registration, self.wrote_transformed_volume, self.wrote_transform]
+        process_events = [self.create_process_event(event_type) for event_type in process_events]
+        print process_events
+        return process_events
+
 
     def downloadInputImpl(self):
         print "segmodeldownloadinputimpl"
@@ -68,25 +79,24 @@ class SlicerRegPipeline(SlicerPipeline):
 
         fixedVolume = slicer_utils.load_volume(self.fixedVolumeFile)
         movingVolume = slicer_utils.load_volume(self.movingVolumeFile)
-        self.reportProcessStatus("Loaded Input Volumes")
-
+        self.reportProcessStatus(self.loaded_input_volumes)
         outputTransform = slicer_utils.create_linear_transform()
 
         slicer_utils.run_fiducial_registration(fixedFiducialsList, movingFiducialsList, outputTransform, self.transformType)
-        self.reportProcessStatus("Finished Registration")
+        self.reportProcessStatus(self.finished_registration)
 
         self.transformed_volume = self.outputVolumeName + '.mha'
         outPath = os.path.join(self.outdir, self.transformed_volume)
         # apply transform to moving image, then save volume
         movingVolume.ApplyTransformMatrix(outputTransform.GetMatrixTransformToParent())
         slicer_utils.write_storable_node(movingVolume, outPath)
-        self.reportProcessStatus("Wrote Transformed Volume")
+        self.reportProcessStatus(self.wrote_transformed_volume)
 
         self.transform = self.outputTransformName + '.tfm'
         outPath = os.path.join(self.outdir, self.transform)
         slicer_utils.write_storable_node(outputTransform, outPath)
 
-        self.reportProcessStatus("Wrote Transform")
+        self.reportProcessStatus(self.wrote_transform)
 
     def uploadOutputImpl(self):
         #print "segmodeluploadoutputimpl"

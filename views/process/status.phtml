@@ -13,8 +13,8 @@ PURPOSE.  See the above copyright notices for more information.
 
  
 //$this->headScript()->appendFile($this->coreWebroot . '/public/js/jquery/jquery.tablesorter.min.js');
-//$this->headScript()->appendFile($this->apiWebroot . '/public/js/common/common.ajaxapi.js');
-//$this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/process.status.js');
+$this->headScript()->appendFile($this->apiWebroot . '/public/js/common/common.ajaxapi.js');
+$this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/process.status.js');
 ?>
 <link type="text/css" rel="stylesheet" href="<?php echo $this->moduleWebroot?>/public/css/layout/pyslicer.css" />
 
@@ -52,17 +52,9 @@ if(isset($condition) && $condition != '')
   echo "</ul>";
   }
 
-$settingModel = MidasLoader::loadModel('Setting');
-$twistedServerUrl = $settingModel->getValueByName('slicerProxyUrl', 'pyslicer');
-    
-$url = $twistedServerUrl . '/status?job_id='. $this->job->getJobId();
-$data = file_get_contents($url);
-$data = trim($data, '[]');
-$events = explode(',', $data);
-$messageEvent = '/status job=(.*) eventid=(.*) timestamp=(.*) eventType=(.*) message=(.*)/';
-$nonmessageEvent = '/status job=(.*) eventid=(.*) timestamp=(.*) eventType=(.*)/';
-echo '<table>';
-$headers = array('Event', 'Timestamp', 'Message');
+//  jobStatuses
+echo '<table id="midas_pyslicer_jobstatuses">';
+$headers = array('Event', 'Message', 'Completion Time');
 echo '<tr>';
 foreach($headers as $header)
   {
@@ -70,29 +62,14 @@ foreach($headers as $header)
   }
 echo '</tr>';
 
-foreach($events as $event)
+
+foreach($this->jobStatuses as $jobstatus)
   {
-  $event = trim($event, "'");
-  $event = str_replace('\r', '', $event);
-  if(preg_match($messageEvent, $event, $matches))
-    {
-    $timestamp = $matches[3];
-    $eventType = $matches[4];
-    $message = $matches[5];
-    }
-  else
-    {
-    preg_match($nonmessageEvent, $event, $matches);
-    $timestamp = $matches[3];
-    $eventType = $matches[4];
-    $message = '';
-    }
-    
-    echo '<tr>';
-    echo '<td>' . $eventType . '</td>';
-    echo '<td>' . $timestamp . '</td>';
-    echo '<td>' . $message . '</td>';
-    echo '</tr>';  
+  echo '<tr class="statusRow">';
+  echo '<td>' . $jobstatus->getEventType() . '</td>';
+  echo '<td>' . $jobstatus->getMessage() . '</td>';
+  echo '<td>' . $jobstatus->getNotifyDate() . '</td>';
+  echo '</tr>';  
   }
 echo '</table>';
 

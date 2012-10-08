@@ -280,11 +280,16 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
       {
       throw new Zend_Exception('You do not have permissions to view this job.');
       }
+    
+    $jobstatusModel = MidasLoader::loadModel('Jobstatus', 'pyslicer');
+    $jobStatuses = $jobstatusModel->getForJob($job);
       
+    $this->view->json['jobId'] = $jobId;
     $this->view->job = $job;
     $this->view->statusStrings = $this->statusStrings;
     $this->view->statusClasses = $this->statusClasses;
     $this->view->insAndOuts = $this->resolveInputsAndOutputs($job);
+    $this->view->jobStatuses = $jobStatuses;
     }  
     
     
