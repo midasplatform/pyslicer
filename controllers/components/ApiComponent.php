@@ -592,7 +592,10 @@ class Pyslicer_ApiComponent extends AppComponent
    * will return a job object for a job_id with the current status,
    * along with any related jobstatus objects for that job.
    * @param job_id the id of the job to query status for.
-   * @return array ('job' => the job object, 'jobstatuses' => the array of jobstatus objects)
+   * @return array ('job' => the job object,
+                    'jobstatuses' => the array of jobstatus objects,
+                    'condition_rows' => array of job condition lines, if any,
+                    'output_links' => array of output links for this job, if any).
    */
   public function getJobstatus($args)
     {
@@ -619,7 +622,10 @@ class Pyslicer_ApiComponent extends AppComponent
     // get the status details
     $jobstatuses = $jobstatusModel->getForJob($job);
     
-    return array('job' => $job, 'jobstatuses' => $jobstatuses);  
+    $pipelineComponent = MidasLoader::loadComponent('Pipeline', 'pyslicer');
+    $conditionRows = $pipelineComponent->formatJobCondition($job->getCondition());
+    $inputsAndOutputs = $pipelineComponent->resolveInputsAndOutputs($job);
+    return array('job' => $job, 'jobstatuses' => $jobstatuses, 'condition_rows' => $conditionRows, 'output_links' => $inputsAndOutputs['outputs']);  
     }
     
     
