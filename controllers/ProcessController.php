@@ -287,6 +287,8 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     $jobStatuses = $jobstatusModel->getForJob($job);
       
     $this->view->json['jobId'] = $jobId;
+    $this->view->json['statusStrings'] = $this->statusStrings;
+    $this->view->json['statusClasses'] = $this->statusClasses;
     $this->view->job = $job;
     $this->view->statusStrings = $this->statusStrings;
     $this->view->statusClasses = $this->statusClasses;

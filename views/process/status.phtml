@@ -23,7 +23,7 @@ $this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/proce
 <?php
 echo '<ul id="midas_pyslicer_jobstatus_header">';
 echo "<li><span class='key'>Name:</span> " .$this->job->getName().'</li>';
-echo '<li><span class="key">Status:</span> <span class="'.$this->statusClasses[$this->job->getStatus()].'">'.$this->statusStrings[$this->job->getStatus()].'</span></li>';
+echo '<li><span class="key">Status:</span> <span id="midas_pyslicer_job_status" class="'.$this->statusClasses[$this->job->getStatus()].'">'.$this->statusStrings[$this->job->getStatus()].'</span></li>';
 echo "<li><span class='key'>Params:</span> " .$this->job->getParams().'</li>';
 echo "<li><span class='key'>Script:</span> " .$this->job->getScript().'</li>';
 echo "<li><span class='key'>Creation Date:</span> " .$this->job->getCreationDate().'</li>';
