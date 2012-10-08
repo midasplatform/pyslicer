@@ -1,0 +1,39 @@
+div.viewInput,div.viewOutput {
+  margin-top: 10px;
+}
+
+#midas_pyslicer_jobstatus_header {
+  padding-left: 0px;
+}
+
+div.tableTitle {
+  margin-top: 8px;
+  padding-top: 7px;
+  margin-bottom: 7px;
+  font-size: 15px;
+  border-top: 1px solid #d7d7d7;
+}
+
+#midas_pyslicer_jobstatuses {
+  border-collapse: collapse;
+}
+
+#midas_pyslicer_jobstatuses th {
+  border: 1px solid #bbbbbb;
+  padding: 3px;
+  background-color: #ccdfdf;
+}
+
+#midas_pyslicer_jobstatuses td {
+  border: 1px solid #d7d7d7;
+  padding: 3px 10px 3px 5px;
+}
+
+span.key {
+  font-weight: bold;
+}
+
+div.tableContainer {
+  padding-bottom: 9px;
+  border-bottom: 1px solid #d7d7d7;
+}

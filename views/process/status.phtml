@@ -17,15 +17,16 @@ $this->headScript()->appendFile($this->apiWebroot . '/public/js/common/common.aj
 $this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/process.status.js');
 ?>
 <link type="text/css" rel="stylesheet" href="<?php echo $this->moduleWebroot?>/public/css/layout/pyslicer.css" />
+<link type="text/css" rel="stylesheet" href="<?php echo $this->moduleWebroot?>/public/css/process/process.status.css" />
 
 <div id="jobstatus" class="viewMain" >
 <?php
 echo '<ul id="midas_pyslicer_jobstatus_header">';
-echo "<li>Name: " .$this->job->getName().'</li>';
-echo '<li>Status: <span class="'.$this->statusClasses[$this->job->getStatus()].'">'.$this->statusStrings[$this->job->getStatus()].'</span></li>';
-echo "<li>Params: " .$this->job->getParams().'</li>';
-echo "<li>Script: " .$this->job->getScript().'</li>';
-echo "<li>Creation Date: " .$this->job->getCreationDate().'</li>';
+echo "<li><span class='key'>Name:</span> " .$this->job->getName().'</li>';
+echo '<li><span class="key">Status:</span> <span class="'.$this->statusClasses[$this->job->getStatus()].'">'.$this->statusStrings[$this->job->getStatus()].'</span></li>';
+echo "<li><span class='key'>Params:</span> " .$this->job->getParams().'</li>';
+echo "<li><span class='key'>Script:</span> " .$this->job->getScript().'</li>';
+echo "<li><span class='key'>Creation Date:</span> " .$this->job->getCreationDate().'</li>';
 echo "</ul>";
 
 // TODO move this to a component
@@ -51,16 +52,19 @@ if(isset($condition) && $condition != '')
     }
   echo "</ul>";
   }
-
+?>
+<div class="tableTitle">Pipeline Progress</div>
+<div class="tableContainer">
+<?php
 //  jobStatuses
-echo '<table id="midas_pyslicer_jobstatuses">';
+echo '<table id="midas_pyslicer_jobstatuses"><thead>';
 $headers = array('Event', 'Message', 'Completion Time');
 echo '<tr>';
 foreach($headers as $header)
   {
-  echo '<td>' . $header . '</td>';
+  echo '<th>' . $header . '</th>';
   }
-echo '</tr>';
+echo '</tr></thead><tbody>';
 
 
 foreach($this->jobStatuses as $jobstatus)
@@ -71,18 +75,20 @@ foreach($this->jobStatuses as $jobstatus)
   echo '<td>' . $jobstatus->getNotifyDate() . '</td>';
   echo '</tr>';  
   }
-echo '</table>';
+echo '</tbody></table></div>';
 
-echo 'View Inputs:';
+echo '<div class="viewInput"><span class="key">View Input:</span> ';
 foreach($this->insAndOuts['inputs'] as $input)
   {
   echo '<a href="'.$input['url'].'">'.$input['text'].'</a>';  
   }
-echo 'View Outputs:';
+echo '</div>';
+echo '<div class="viewOutput"><span class="key">View Output:</span> ';
 foreach($this->insAndOuts['outputs'] as $output)
   {
   echo '<a href="'.$output['url'].'">'.$output['text'].'</a>';  
   }
+echo '</div>';
 
 // input & maybe a thumbnail?
 // output link

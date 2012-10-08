@@ -292,6 +292,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
     $this->view->statusClasses = $this->statusClasses;
     $this->view->insAndOuts = $this->resolveInputsAndOutputs($job);
     $this->view->jobStatuses = $jobStatuses;
+    $this->view->header = 'PySlicer Job Status';
     }  
     
     
