@@ -60,7 +60,7 @@ class Pyslicer_PipelineComponent extends AppComponent
     {
     $inputItemId = $inputs[0]->getItemId();
     $inputLink = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId;
-    $inputLinkText = 'View Input';
+    $inputLinkText = 'View';
     return array( array ('text' => $inputLinkText, 'url' => $inputLink));
     }
 
@@ -69,7 +69,7 @@ class Pyslicer_PipelineComponent extends AppComponent
     $inputItemId = $inputs[0]->getItemId();
     $outputItemId = $outputs[0]->getItemId();
     $outputLink = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports='.$midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
-    $outputLinkText = 'View Output';  
+    $outputLinkText = 'View';  
     return array( array ('text' => $outputLinkText, 'url' => $outputLink));
     }
   
@@ -79,7 +79,7 @@ class Pyslicer_PipelineComponent extends AppComponent
     $movingItemId = $inputs[1]->getItemId();
     $inputLink = $midasPath . '/visualize/paraview/dual?left='.$fixedItemId;
     $inputLink .= '&right=' . $movingItemId;
-    $inputLinkText = 'View Input';
+    $inputLinkText = 'View';
     return array( array ('text' => $inputLinkText, 'url' => $inputLink));
     }
 
@@ -105,7 +105,7 @@ class Pyslicer_PipelineComponent extends AppComponent
     $outputLink = $midasPath . '/visualize/paraview/dual?left='.$fixedItemId;
     $outputLink .= '&right=' . $outputVolumeId;
     $outputLink .= '&jsImports=' . $midasPath.'/modules/pyslicer/public/js/lib/visualize.regOutput.js';
-    $outputLinkText = 'View Output';  
+    $outputLinkText = 'View';  
     return array( array ('text' => $outputLinkText, 'url' => $outputLink));
     }
     
