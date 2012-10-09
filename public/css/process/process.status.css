@@ -6,6 +6,10 @@ div.viewInput,div.viewOutput {
   padding-left: 0px;
 }
 
+#midas_pyslicer_jobstatus_header li {
+  word-wrap: break-word;
+}
+
 div.tableTitle {
   margin-top: 8px;
   padding-top: 7px;
