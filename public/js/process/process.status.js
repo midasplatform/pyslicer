@@ -10,6 +10,11 @@ $(document).ready(function(){
 });
 
 
+midas.pyslicer.process.isCompleted = function(jobStatus) {
+    // complete is 2, error is 3
+    return (jobStatus < 2);  
+}
+
 midas.pyslicer.process.refreshView = function(jobStatusesCount, jobStatus) {
     // display the table if there are rows to show
     if(jobStatusesCount > 0) {
@@ -19,14 +24,12 @@ midas.pyslicer.process.refreshView = function(jobStatusesCount, jobStatus) {
     else {
         $('#midas_pyslicer_jobstatuses').hide();
         // show the loading icon if we are not yet complete or in error
-        // complete is 2, error is 3
-        if(jobStatus < 2) {
+        if(midas.pyslicer.process.isCompleted(jobStatus)) {
             $('#midas_pyslicer_jobstatuses_loading').show();
         }
     }
     // update the job status if we are not yet complete or in error
-    // complete is 2, error is 3
-    if(jobStatus < 2) {
+    if(midas.pyslicer.process.isCompleted(jobStatus)) {
         var t = setTimeout(midas.pyslicer.process.updateJobStatus, midas.pyslicer.process.delayMillis);
     }
 }
@@ -58,11 +61,15 @@ midas.pyslicer.process.updateJobStatus = function() {
             $.each(results.data.jobstatuses, function(index, statusrow) {
                 var html = '';
                 html+='<tr class="statusRow">';
+                var emptyNotifyDateColVal = '';
+                if(midas.pyslicer.process.isCompleted(results.data.job.status)) {
+                    emptyNotifyDateColVal = '<img alt="Loading..." src="'+json.global.coreWebroot+'/public/images/icons/loading.gif" />';    
+                }
                 $.each(columns, function (col_index, column)  {
                     var colval = statusrow[column];
                     if(colval == null) {
                         if(column == 'notify_date') {
-                            colval = '<img alt="Loading..." src="'+json.global.coreWebroot+'/public/images/icons/loading.gif" />';    
+                            colval = emptyNotifyDateColVal;    
                         }
                         else {
                             colval = "";
@@ -77,7 +84,8 @@ midas.pyslicer.process.updateJobStatus = function() {
             if(results.data.output_links.length > 0) {
                 $('.outputLink').remove();
                 $.each(results.data.output_links, function(index, outputLink) {
-                    var link = '<a class="outputLink" href="'+outputLink.url+'">'+outputLink.text+'</a>';  
+                    var link = '<a class="outputLink" href="'+outputLink.url+'">';
+                    link += outputLink.text+'</a>';  
                     $('.viewOutput').append(link);
                 });
             }
