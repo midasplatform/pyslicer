@@ -51,11 +51,13 @@ class Pyslicer_Notification extends ApiEnabled_Notification
       $apiComponent = MidasLoader::loadComponent('Api', $this->moduleName);
       $args = array("useSession" => true);
       $jobCounts = $apiComponent->getUserJobCountsByStatus($args);
-      $jobsCounts = '</span><span id="midas_'.$this->moduleName.'_jobcount_wait">' . $jobCounts['wait'] .
-                    '</span><span id="midas_'.$this->moduleName.'_jobcount_started">' . $jobCounts['started'] .
-                    '</span><span id="midas_'.$this->moduleName.'_jobcount_done">' . $jobCounts['done'] .
-                    '</span><span id="midas_'.$this->moduleName.'_jobcount_error">' . $jobCounts['error'] . '</span>';
-      return array('Jobs '. $jobsCounts => array($moduleWebroot . '/process/statuslist',  $baseURL . '/modules/'.$this->moduleName.'/public/images/slicer_icon16x16.png'));
+      $active = $jobCounts['wait'] + $jobCounts['started'];
+      $text = 'Jobs';
+      if($active > 0)
+        {
+        $text .= ' ('.$active.' active)';
+        }
+      return array($text => array($moduleWebroot . '/process/statuslist',  $baseURL . '/modules/'.$this->moduleName.'/public/images/slicer_icon16x16.png'));
       }
     else
       {
