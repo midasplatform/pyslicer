@@ -3,12 +3,12 @@ span#midas_pyslicer_jobcount_wait {
 }
 
 span#midas_pyslicer_jobcount_started {
-    color: green;   
+    color: blue;   
     margin-left: 1em;
 }
 
 span#midas_pyslicer_jobcount_done {
-    color: blue;   
+    color: green;   
     margin-left: 1em;
 }
 
@@ -21,10 +21,10 @@ span#midas_pyslicer_jobcount_error {
     color: black !important;
 }
 .midas_pyslicer_started {
-    color: green !important;
+    color: blue !important;
 }
 .midas_pyslicer_done {
-    color: blue !important;
+    color: green !important;
 }
 .midas_pyslicer_error {
     color: red !important;

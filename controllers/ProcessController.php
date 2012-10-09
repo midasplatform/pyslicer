@@ -50,8 +50,8 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
           elseif($column === 'status')
             {
             $status = $job->getStatus();
-            $jobRow['status_string'] = $this->statusStrings[$status];
-            $jobRow['status_class'] = $this->statusClasses[$status];
+            $jobRow['status_string'] = $this->ModuleComponent->Pipeline->statusStrings[$status];
+            $jobRow['status_class'] = $this->ModuleComponent->Pipeline->statusClasses[$status];
             }
           /*elseif($column === 'output')
             {
