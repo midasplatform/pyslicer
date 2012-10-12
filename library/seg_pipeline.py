@@ -1,10 +1,3 @@
-# TODO this is a terrible HACK to add site packages to the Slicer Python
-# but better than what was before, hopefully to be improved further
-tmp_paths = ['/usr/lib/python2.6/dist-packages/',
-             '/usr/local/lib/python2.6/dist-packages/']
-import sys
-sys.path.extend(tmp_paths)
-
 from __main__ import vtk, slicer
 from slicerprocess import SlicerPipeline
 import pydas
@@ -99,7 +92,7 @@ class SlicerSegPipeline(SlicerPipeline):
         # set metadata on the output item
         method = 'midas.item.setmultiplemetadata'
         parameters = {}
-        parameters['token'] = pydas.token
+        parameters['token'] = pydas.session.token
         parameters['itemid'] = item_id
         parameters['count'] = 2
         parameters['element_1'] = 'Visualize'
@@ -109,7 +102,7 @@ class SlicerSegPipeline(SlicerPipeline):
         parameters['value_1'] = '[1.0,0.0,0.0]'
         parameters['value_2'] = '[180.0,180.0,0.0]'
         print parameters
-        pydas.communicator.request(method, parameters) 
+        pydas.session.communicator.request(method, parameters) 
 
 
 
@@ -123,5 +116,3 @@ if __name__ == '__main__':
     (input_item_id, coords, output_item_name, output_folder_id) = (arg_map['inputitemid'][0], arg_map['coords'][0], arg_map['outputitemname'][0], arg_map['outputfolderid'][0], ) 
     sp = SlicerSegPipeline(jobId, pydasParams, tmpDirRoot, input_item_id, coords, output_item_name, output_folder_id)
     sp.execute()
-
-    #    http://localhost:8880/slicerjob/init/?pipeline=segmentation&job_id=90&url=http://localhost/midas3&email=michael.grauer@kitware.com&apikey=dcc90e81da77d774bcaf44c4c1d9648c&inputitemid=1778&outputitemname=myseg&outputfolderid=896&coords=93,82,90
