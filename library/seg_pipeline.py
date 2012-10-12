@@ -123,5 +123,3 @@ if __name__ == '__main__':
     (input_item_id, coords, output_item_name, output_folder_id) = (arg_map['inputitemid'][0], arg_map['coords'][0], arg_map['outputitemname'][0], arg_map['outputfolderid'][0], ) 
     sp = SlicerSegPipeline(jobId, pydasParams, tmpDirRoot, input_item_id, coords, output_item_name, output_folder_id)
     sp.execute()
-
-    #    http://localhost:8880/slicerjob/init/?pipeline=segmentation&job_id=90&url=http://localhost/midas3&email=michael.grauer@kitware.com&apikey=dcc90e81da77d774bcaf44c4c1d9648c&inputitemid=1778&outputitemname=myseg&outputfolderid=896&coords=93,82,90
