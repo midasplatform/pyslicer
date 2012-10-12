@@ -1,10 +1,3 @@
-# TODO this is a terrible HACK to add site packages to the Slicer Python
-# but better than what was before, hopefully to be improved further
-tmp_paths = ['/usr/lib/python2.6/dist-packages/',
-             '/usr/local/lib/python2.6/dist-packages/']
-import sys
-sys.path.extend(tmp_paths)
-
 from __main__ import vtk, slicer
 from slicerprocess import SlicerPipeline
 import pydas
@@ -99,7 +92,7 @@ class SlicerSegPipeline(SlicerPipeline):
         # set metadata on the output item
         method = 'midas.item.setmultiplemetadata'
         parameters = {}
-        parameters['token'] = pydas.token
+        parameters['token'] = pydas.session.token
         parameters['itemid'] = item_id
         parameters['count'] = 2
         parameters['element_1'] = 'Visualize'
@@ -109,7 +102,7 @@ class SlicerSegPipeline(SlicerPipeline):
         parameters['value_1'] = '[1.0,0.0,0.0]'
         parameters['value_2'] = '[180.0,180.0,0.0]'
         print parameters
-        pydas.communicator.request(method, parameters) 
+        pydas.session.communicator.request(method, parameters) 
 
 
 

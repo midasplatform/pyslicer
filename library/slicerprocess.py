@@ -1,10 +1,3 @@
-# TODO this is a terrible HACK to add site packages to the Slicer Python
-# but better than what was before, hopefully to be improved further
-tmp_paths = ['/usr/lib/python2.6/dist-packages/',
-             '/usr/local/lib/python2.6/dist-packages/']
-import sys
-sys.path.extend(tmp_paths)
-
 from twisted.internet import reactor
 from twisted.internet import protocol
 import re
@@ -263,9 +256,9 @@ class SlicerPipeline():
         print json_events
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
-        parameters['token'] = pydas.token
+        parameters['token'] = pydas.session.token
         parameters['events'] = json_events
-        event_id_to_jobstatus_id = pydas.communicator.request(method, parameters) 
+        event_id_to_jobstatus_id = pydas.session.communicator.request(method, parameters) 
         for (event_id, jobstatus_id) in event_id_to_jobstatus_id.items():
             event = self.events_map[event_id]
             event.jobstatus_id = jobstatus_id
@@ -304,7 +297,7 @@ class SlicerPipeline():
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
  
-        pydas._download_item(itemId, self.datadir)
+        pydas.api._download_item(itemId, self.datadir)
         # unzip any zipped files
         for filename in os.listdir(self.datadir):
             if filename.endswith('.zip'):
@@ -313,7 +306,7 @@ class SlicerPipeline():
                 zip.extractall(self.datadir)
                 zip.close()
         # return the path to the name of the item
-        item = pydas.communicator.item_get(pydas.token, itemId)
+        item = pydas.session.communicator.item_get(pydas.session.token, itemId)
         return os.path.join(self.datadir, item['name'])
 
 
@@ -324,28 +317,28 @@ class SlicerPipeline():
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
         if item_description is not None:
-            item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId, description=item_description)
+            item = pydas.session.communicator.create_item(pydas.session.token, itemName, outputFolderId, description=item_description)
         else:
-            item = pydas.communicator.create_item(pydas.token, itemName, outputFolderId)
+            item = pydas.session.communicator.create_item(pydas.session.token, itemName, outputFolderId)
         item_id = item['item_id']
         if out_file is not None:
             # only upload this one file
-            upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, out_file)
+            upload_token = pydas.session.communicator.generate_upload_token(pydas.session.token, item_id, out_file)
             filepath=os.path.join(self.outdir, out_file)
-            pydas.communicator.perform_upload(upload_token, out_file, itemid=item_id, filepath=filepath)
+            pydas.session.communicator.perform_upload(upload_token, out_file, itemid=item_id, filepath=filepath)
         else:
             for filename in os.listdir(self.outdir):
-                upload_token = pydas.communicator.generate_upload_token(pydas.token, item_id, filename)
+                upload_token = pydas.session.communicator.generate_upload_token(pydas.session.token, item_id, filename)
                 filepath=os.path.join(self.outdir, filename)
-                pydas.communicator.perform_upload(upload_token, filename, itemid=item_id, filepath=filepath)
+                pydas.session.communicator.perform_upload(upload_token, filename, itemid=item_id, filepath=filepath)
             # set the output item as an output for the job
         method = 'midas.pyslicer.add.job.output.item'
         parameters = {}
-        parameters['token'] = pydas.token
+        parameters['token'] = pydas.session.token
         parameters['job_id'] = self.jobId
         parameters['item_id'] = item_id
         print parameters
-        pydas.communicator.request(method, parameters) 
+        pydas.session.communicator.request(method, parameters) 
         return item_id
 
 
@@ -370,10 +363,10 @@ class SlicerPipeline():
         match.timestamp = timestamp
         method = 'midas.pyslicer.notify.jobstatus'
         parameters = {}
-        parameters['token'] = pydas.token
+        parameters['token'] = pydas.session.token
         parameters['jobstatus_id'] = match.jobstatus_id
         parameters['notify_date'] = timestamp
-        pydas.communicator.request(method, parameters) 
+        pydas.session.communicator.request(method, parameters) 
 
 
     def reportProcessStatus(self, message=None):
@@ -394,12 +387,12 @@ class SlicerPipeline():
         pydas.login(email=email, api_key=apiKey, url=url)
         method = 'midas.pyslicer.update.job'
         parameters = {}
-        parameters['token'] = pydas.token
+        parameters['token'] = pydas.session.token
         parameters['job_id'] = self.jobId
         parameters['status'] = status
         if condition is not None: parameters['condition'] = condition
         print parameters
-        pydas.communicator.request(method, parameters) 
+        pydas.session.communicator.request(method, parameters) 
 
 
     def execute(self):
