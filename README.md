@@ -21,15 +21,22 @@ Now change directories into your SLICER_DIR.
 
 cd SLICER_DIR
 
-We will need a pyconfig.h header for python26 in order to install pip.  You can get this from an ubuntu python system install of 2.6 at 
 
+As of Slicer Nightly Build 10-16-2012, you will no longer need to manually create the include path or copy over pyconfig.h
+
+We will need a pyconfig.h header for python26 in order to install pip.  You can get this from an ubuntu python system install of 2.6 at 
 /usr/include/python2.6
+
+
 
 Since we will also be compiling twisted, we will need all headers here, so go ahead and copy them over.
 
 mkdir lib/Python/include
 mkdir lib/Python/include/python2.6
 cp /usr/include/python2.6/*.h lib/Python/include/python2.6/
+
+
+
 
 
 Download and install distribute and pip, you will have to replace the path to the python exe with
