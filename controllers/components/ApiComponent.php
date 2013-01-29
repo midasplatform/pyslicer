@@ -241,7 +241,7 @@ class Pyslicer_ApiComponent extends AppComponent
     
     if(!$outputFolderId)
       {
-      $outputFolderId = $userDao->getPrivatefolderId();  
+      $outputFolderId = $userDao->getFolderId();  
       }
       
     return $outputFolderId;  
@@ -303,7 +303,7 @@ class Pyslicer_ApiComponent extends AppComponent
     
     $job->setParams(JsonComponent::encode($params));
     $jobModel->save($job);    
-    return $job;
+    return array($job, $params);
     }
 
   protected function _constructJobCreationUrl($userDao, $script, $job, $params)
@@ -400,7 +400,7 @@ class Pyslicer_ApiComponent extends AppComponent
     // output_volume_name and output_transform_name will be set in job creation 
     // if they do not exist
     // job_name will be set in job creation if it does not exist
-    $job = $this->_createJob($userDao, $script, &$params, $inputItems, $synthesizedItemNames,
+    list($job, $params) = $this->_createJob($userDao, $script, $params, $inputItems, $synthesizedItemNames,
                              isset($args['job_name']) ? $args['job_name'] : false);
     
     list($jobCreationUrl, $midasUrl) = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
