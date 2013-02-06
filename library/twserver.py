@@ -60,8 +60,8 @@ class SlicerjobInit(Resource):
              pipeline = request.args['pipeline'][0]
              print ">>>>>>>>>>>>>>>>>>>>>>TWSERVER starting SlicerProcess"
              slicerJob = SlicerProcess(jobManager, job_id, pipeline, request.args)
-             slicerJob.run() 
-             response = "started job " + str(job_id)
+             response = slicerJob.run() 
+             print "resturning response:", response
         return response
 
 

@@ -7,6 +7,10 @@ import sys
 import pydas
 import shutil
 import json
+import traceback
+import time
+from __main__ import slicer
+from PythonQt.qSlicerBaseQTCLI import qSlicerCLIModule
 
 class SlicerProcessJobManager():
     def __init__(self, tmpDirRoot, slicerPath):
@@ -111,13 +115,41 @@ class SlicerPipelineStatusTracker():
 
     def finish(self):
         self.finished = True
-        from __main__ import slicer
         slicer.app.exit()
+
+def list_cli_modules(args):
+
+    def str_to_class(str):
+        return reduce(getattr, str.split("."), sys.modules[__name__])
+
+    clis = [str(mod)for mod in dir(slicer.modules) if (type(str_to_class('slicer.modules.'+mod)) == qSlicerCLIModule)]
+    return clis
+
+def cli_module_description(args):
+    try:
+        print args
+        module_name = args['module_name'][0]
+        print module_name
+        module = getattr(slicer.modules, module_name)
+        l = module.cliModuleLogic()
+        n = l.CreateNode()
+        params = {}
+        for i in range(n.GetNumberOfParameterGroups()):
+            group_params = []
+            for j in range(n.GetNumberOfParametersInGroup(i)):
+                group_params.append(n.GetParameterName(i, j))
+            params[n.GetParameterGroupLabel(i)] = group_params
+        return params
+    except AttributeError:
+        return "no module with that name"
 
 
 class SlicerProcess(protocol.ProcessProtocol):
-    pipeline_scripts = {'segmentation' : 'seg_pipeline.py', 'registration' : 'reg_pipeline.py'}
+    pipeline_scripts = {'segmentation' : 'seg_pipeline.py', 'registration' : 'reg_pipeline.py',
+                        'runmodule' : 'runmodule_pipeline.py'}
 
+    sync_scripts = {'listmodules' : list_cli_modules,
+                    'describemodule' : cli_module_description }
 
 
     def __init__(self, jobManager, jobId, pipeline, request_args):
@@ -178,21 +210,29 @@ class SlicerProcess(protocol.ProcessProtocol):
         print str(self.jobId) + "processEnded, status %d" % (reason.value.exitCode,)
 
     def run(self):
-        xvfbLogfile = os.path.join(self.jobManager.tmpDirRoot, 'xvfb.log')
-        xvfbCmdParts = ['xvfb-run', '-a', '-e', xvfbLogfile]
-        slicerArgs = ['--no-main-window', '--python-script']
-        slicerPythonScript = [self.pipeline_scripts[self.pipeline]]
-        #licerPythonScript = ['seg_pipeline.py']
-        import json
-        json_args = json.dumps(self.request_args)
-        print json_args
-        print [json_args]
-        print [str(self.jobId), self.jobManager.tmpDirRoot, json_args]
-        slicerCmdParts = [self.jobManager.slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, json_args]#['slicerjob']
-        cmd = xvfbCmdParts + slicerCmdParts  
-        print str(self.jobId) + " run: " + str(cmd)
-        print ">>>>>>>>>>>>>>>SlicerProcess running:",str(cmd)
-        reactor.spawnProcess(self, 'xvfb-run', cmd, {}, usePTY=True)
+        if self.pipeline in self.sync_scripts:
+            print self.request_args
+            # ALL we have to do is called the code, easy to put it into a separate file
+            output = (self.sync_scripts[self.pipeline])(self.request_args)
+            print output
+            return json.dumps(output)
+        else:
+            xvfbLogfile = os.path.join(self.jobManager.tmpDirRoot, 'xvfb.log')
+            xvfbCmdParts = ['xvfb-run', '-a', '-e', xvfbLogfile]
+            slicerArgs = ['--no-main-window', '--python-script']
+            slicerPythonScript = [self.pipeline_scripts[self.pipeline]]
+            json_args = json.dumps(self.request_args)
+            print json_args
+            print [json_args]
+            print [str(self.jobId), self.jobManager.tmpDirRoot, json_args]
+            slicerCmdParts = [self.jobManager.slicerPath] + slicerArgs + slicerPythonScript + [str(self.jobId), self.jobManager.tmpDirRoot, json_args]#['slicerjob']
+            cmd = xvfbCmdParts + slicerCmdParts  
+            print str(self.jobId) + " run: " + str(cmd)
+            print ">>>>>>>>>>>>>>>SlicerProcess running:",str(cmd)
+            reactor.spawnProcess(self, 'xvfb-run', cmd, {}, usePTY=True)
+        return "started job " + str(self.jobId)
+
+
 
 
 
@@ -358,7 +398,6 @@ class SlicerPipeline():
             print 'reportStatus',    eventType, message
             print "NO MATCH"
             exit(1)
-        import time
         timestamp = time.time()
         match.timestamp = timestamp
         method = 'midas.pyslicer.notify.jobstatus'
@@ -415,7 +454,6 @@ class SlicerPipeline():
             # TODO send this through status tracker
             self.log.exception(exception)
             self.tracker.reportStatus(self.event_exception)
-            import traceback
             etype, value, tb = sys.exc_info()
             emsg = repr(traceback.format_exception(etype, value, tb))
             self.reportMidasStatus(self.midasstatus_exception, emsg)

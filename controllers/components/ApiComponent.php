@@ -418,7 +418,78 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     }
 
+  public function listSlicerModules($args)
+    {
+    // TODO auth
+    $userModel = MidasLoader::loadModel('User');
+    $userDao = $userModel->load('1');
+    
+    // TODO set as module const
+    $script = 'listmodules';
+    $params = array();
+    $inputItems = array();
+    $synthesizedItemNames = array();
+    $jobName = false;
+    
+    list($job, $params) = $this->_createJob($userDao, $script, $params, $inputItems, $synthesizedItemNames, $jobName);
+    
+    list($jobCreationUrl, $midasUrl) = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
+    
+    // TODO better error handling
+    $data = file_get_contents($jobCreationUrl);  
+    if($data === false)
+      {
+      throw new Zend_Exception("Cannot connect with Slicer Server.");  
+      }
+    else
+      {
+      // expect that the result is json  
+      return array('modules' => $data);
+      }
+    }
+
+  public function describeSlicerModule($args)
+    {
+    $this->_checkKeys(array('module_name'), $args);   
+    // TODO auth
+    $userModel = MidasLoader::loadModel('User');
+    $userDao = $userModel->load('1');
+    
+    // TODO set as module const
+    $script = 'describemodule';
+    $params = array('module_name' => $args['module_name']);
+    $inputItems = array();
+    $synthesizedItemNames = array();
+    $jobName = false;
+    
+    list($job, $params) = $this->_createJob($userDao, $script, $params, $inputItems, $synthesizedItemNames, $jobName);
+    
+    list($jobCreationUrl, $midasUrl) = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
+    
+    // TODO better error handling
+    $data = file_get_contents($jobCreationUrl);  
+    if($data === false)
+      {
+      throw new Zend_Exception("Cannot connect with Slicer Server.");  
+      }
+    else
+      {
+      // expect that the result is json
+      // TODO some parsing if we are getting an unknown module
+      return array('module_description' => $data);
+      }
       
+      
+      
+    $description = array ('some description of inputs and outputs');
+    return array('description' => $description);  
+    }
+
+  public function runSlicerModule($args)
+    {
+    $output = array ('output');  
+    return array('output' => $output);  
+    }
     
 
   /**

@@ -21,48 +21,83 @@ Now change directories into your SLICER_DIR.
 
 cd SLICER_DIR
 
+# install distribute
 
-As of Slicer Nightly Build 10-16-2012, you will no longer need to manually create the include path or copy over pyconfig.h
+wget http://python-distribute.org/distribute_setup.py
+./Slicer distribute_setup.py 
 
-We will need a pyconfig.h header for python26 in order to install pip.  You can get this from an ubuntu python system install of 2.6 at 
-/usr/include/python2.6
+# install pip
+
+wget --no-check-certificate https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+./Slicer get-pip.py 
+
+# install requests
+
+#download the source to SLICER_DIR/requests
+#in SLICER_DIR/requests
+../Slicer setup.py install
+
+# install pydas
+
+#define a file install_distributions.py:
+
+def install_distributions(distributions):
+  """
+  Copied from http://threebean.org/blog/2011/06/06/installing-from-pip-inside-python-or-a-simple-pip-api/
+  """
+  import pip.commands.install
+  command = pip.commands.install.InstallCommand()
+  opts, args = command.parser.parse_args()
+  # TBD, why do we have to run the next part here twice before actual install
+  requirement_set = command.run(opts, distributions)
+  requirement_set = command.run(opts, distributions)
+  requirement_set.install(opts)
+
+install_distributions(['pydas'])
+
+# then call
+./Slicer install_distributions.py
+
+# test your installs
+
+./Slicer --no-main-window --disable-cli-modules --disable-loadable-modules --disable-scripted-loadable-modules --show-python-interactor
+
+# in the python shell, test that these work without error
+import pydas
+import requests
 
 
+# install twisted
 
-Since we will also be compiling twisted, we will need all headers here, so go ahead and copy them over.
 
-mkdir lib/Python/include
-mkdir lib/Python/include/python2.6
+#Since we will also be compiling twisted, we will need all headers here, so go ahead and copy them over.
+
 cp /usr/include/python2.6/*.h lib/Python/include/python2.6/
 
+# download and extract the source of twisted to the SLICER_DIR, then in the Twisted source dir:
+
+../Slicer  --no-main-window --python-script setup.py install
+
+# you may have to kill slicer at the end of the successful install
+
+# test these imports in the slicer python console
+
+
+import twisted.internet
+import twisted.web.server
 
 
 
 
-Download and install distribute and pip, you will have to replace the path to the python exe with
-the path to your installed python 2.6 interpreter exe.
 
-curl http://python-distribute.org/distribute_setup.py > distribute_setup.py
-./Slicer --launch /usr/bin/python distribute_setup.py 
-curl https://raw.github.com/pypa/pip/master/contrib/get-pip.py > get_pip.py
-./Slicer --launch /usr/bin/python get_pip.py 
 
-Now that pip is installed in your Slicer Python, you can run pip to install pydas and the pydas depedencies.
 
-./Slicer --launch SLICER_DIR/lib/Python/bin/pip install pydas
 
-You will need to install twisted, but I had trouble with this step:
 
-./Slicer --launch SLICER_DIR/lib/Python/bin/pip install twisted
-
-An alternate approach is to download the source of twisted, extract it yourself to TWISTED_DIR, then run this command there:
-
-SLICER_DIR/Slicer --no-main-window --python-script setup.py install
 
 
 
 
 Now you could run your twserver.py using your Slicer Python like this :
 
-SLICER_DIR/Slicer --no-main-window --python-script twserver.py
-
+SLICER_DIR/Slicer --no-main-window --disable-loadable-modules --disable-scripted-loadable-modules --python-script twserver.py
