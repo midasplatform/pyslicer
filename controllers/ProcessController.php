@@ -111,6 +111,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
           $jobRows[] = $jobRow;
         }
       $this->view->jobsRows = $jobRows;
+      $this->view->header = "Slicer Pipelines";
       }
     else
       {
