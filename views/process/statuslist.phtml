@@ -20,6 +20,18 @@ $this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/proce
 <link type="text/css" rel="stylesheet" href="<?php echo $this->moduleWebroot?>/public/css/layout/pyslicer.css" />
 
 <div id="showjobs" class="viewMain">
+  
+    
+  <h3>Start a new pipeline job</h3>  
+  <div id="slicerPipelines">
+    <ul>
+      <li><a href="javascript:;" id="segmentation" class="slicerPipeline" ><img alt="" src=""/>Segmentation</a></li>
+      <li><a href="javascript:;" id="registration" class="slicerPipeline" ><img alt="" src=""/>Registration</a></li>
+    </ul>  
+  </div>
+  
+    
+  <h3>Previous job statuses</h3>
   <table class="tablesorter" id="tablesorter_pyslicer_jobs_status">
     <thead>
       <tr class="header">
