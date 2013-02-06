@@ -27,6 +27,12 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
   
   function statuslistAction()
     {
+    if($this->userSession->Dao == null)
+      {
+      $this->haveToBeLogged();
+      return;
+      }  
+      
     if(isset($this->userSession->Dao))
       {
       $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
