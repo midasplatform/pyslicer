@@ -84,9 +84,9 @@ midas.pyslicer.process.updateJobStatus = function() {
             if(results.data.output_links.length > 0) {
                 $('.outputLink').remove();
                 $.each(results.data.output_links, function(index, outputLink) {
-                    var link = '<a class="outputLink" href="'+outputLink.url+'">';
-                    link += outputLink.text+'</a>';  
-                    $('.viewOutput').append(link);
+                    var link = '<li><a class="outputLink" href="'+outputLink.url+'">';
+                    link += outputLink.text+'</a></li>';  
+                    $('.viewOutput ul').append(link);
                 });
             }
             

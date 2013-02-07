@@ -62,19 +62,22 @@ foreach($this->jobStatuses as $jobstatus)
   }
 echo '</tbody></table></div>';
 
-echo '<div class="viewInput"><span class="key">Input:</span> ';
+
+echo '<div class="viewInput"><span>Inputs</span><ul>';
 foreach($this->insAndOuts['inputs'] as $input)
   {
-  echo '<a href="'.$input['url'].'">'.$input['text'].'</a>';  
+  echo '<li><a href="'.$input['url'].'">'.$input['text'].'</a></li>';  
   }
-echo '</div>';
-echo '<div class="viewOutput"><span class="key">Output:</span> ';
+echo '</ul></div>';
+echo '<div class="viewOutput"><span>Outputs</span><ul>';
 foreach($this->insAndOuts['outputs'] as $output)
   {
-  echo '<a class="outputLink" href="'.$output['url'].'">';
-  echo $output['text'].'</a>';  
+  echo '<li><a href="'.$output['url'].'">';
+  echo $output['text'].'</a></li>';  
   }
-echo '</div>';
+echo '</ul></div>';
+
+
 ?>
 
 
