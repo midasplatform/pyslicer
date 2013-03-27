@@ -40,7 +40,7 @@ class Pyslicer_ProcessController extends Pyslicer_AppController
       
       $midasPath = Zend_Registry::get('webroot');
       $columnsHeaders = array('name' => 'Name', 'script' => 'Job Type', 'params' => 'Params', 'creation_date' => 'Creation Date', 'status' => 'Status');
-      $jobsRows = array();
+      $jobRows = array();
       $this->view->columnHeaders = $columnsHeaders;
       foreach($jobs as $job)
         {
