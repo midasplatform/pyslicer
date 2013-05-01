@@ -1,20 +1,20 @@
 var midas = midas || {};
-midas.visualize = midas.visualize || {};
+midas.pvw = midas.pvw || {};
 
 /**
  * Activate point selection mode as soon as we are done initializing
  */
-midas.visualize.postInitCallback = function () {
+midas.pvw.postInitCallback = function () {
     $('button.pointSelectButton').click();
 };
 
 /**
  * Callback handler for point selection within an image
  */
-midas.visualize.handlePointSelect = function (point) {
+midas.pvw.handlePointSelect = function (point) {
     $('div.MainDialog').dialog('close');
     html= '<div><input style="width: 400px;" type="text" id="processItemSlicerOutputName" value="'
-          +json.visualize.item.name+'_seg_out" /></div><br/><br/>';
+          +json.pvw.item.name+'_seg_out" /></div><br/><br/>';
     html+= '<img src="'+json.global.coreWebroot+'/public/images/icons/loading.gif" '
           +'id="processingPleaseWait" style="display: none;" />';
     html+= '<div style="float: right;">';
@@ -32,7 +32,7 @@ midas.visualize.handlePointSelect = function (point) {
         $('#processingPleaseWait').show();
         ajaxWebApi.ajax({
             method: 'midas.pyslicer.start.item.processing',
-            args: 'item_id='+json.visualize.item.item_id+'&output_item_name='+outputItemName+'&seed='+seed,
+            args: 'item_id='+json.pvw.item.item_id+'&output_item_name='+outputItemName+'&seed='+seed,
             success: function(results) {
                 $('div.MainDialog').dialog('close');
                 $('#processingPleaseWait').hide();
@@ -45,11 +45,10 @@ midas.visualize.handlePointSelect = function (point) {
                 $('#processingPleaseWait').hide();
             }
         });
-        
+
     });
 
     $('button.processItemSlicerNo').unbind('click').click(function () {
         $('div.MainDialog').dialog('close');
     });
 };
-

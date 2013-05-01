@@ -37,11 +37,11 @@ class Pyslicer_ApiComponent extends AppComponent
         }
       }
     }
-    
+
   /** Return the user dao */
   private function _getUser($args)
     {
-    $authComponent = MidasLoader::loadComponent('Authentication', 'api');
+    $authComponent = MidasLoader::loadComponent('Authentication');
     return $authComponent->getUser($args, Zend_Registry::get('userSession')->Dao);
     }
 
@@ -61,8 +61,8 @@ class Pyslicer_ApiComponent extends AppComponent
     {
     // TODO probably want some notion of which script to run
     // maybe get that as an item? or from the terminal? or from a list?
-      
-    $this->_checkKeys(array('item_id', 'output_item_name', 'seed'), $args);    
+
+    $this->_checkKeys(array('item_id', 'output_item_name', 'seed'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
@@ -71,12 +71,12 @@ class Pyslicer_ApiComponent extends AppComponent
 
     $itemModel = MidasLoader::loadModel('Item');
     $folderModel = MidasLoader::loadModel('Folder');
-    
+
     $itemId = $args['item_id'];
     $outputItemName = $args['output_item_name'];
     // TODO pass along the seed
     $seed = JsonComponent::decode($args['seed']);
-    
+
     // check the input item
     $itemDao = $itemModel->load($itemId);
     if($itemDao === false)
@@ -87,11 +87,11 @@ class Pyslicer_ApiComponent extends AppComponent
       {
       throw new Zend_Exception('Read access on this item required.', MIDAS_PYSLICER_INVALID_POLICY);
       }
-    
+
     // check the output folder
     if(isset($args['output_folder_id']))
       {
-      $outputFolderId = $args['output_folder_id'];  
+      $outputFolderId = $args['output_folder_id'];
       $parentFolder = $folderModel->load($outputFolderId);
       }
     else
@@ -107,10 +107,10 @@ class Pyslicer_ApiComponent extends AppComponent
       {
       throw new Zend_Exception('Write access on this folder required.', MIDAS_PYSLICER_INVALID_POLICY);
       }
-      
+
     $userEmail = $userDao->getEmail();
     // get an api key for this user
-    $userApiModel = MidasLoader::loadModel('Userapi', 'api');
+    $userApiModel = MidasLoader::loadModel('Userapi');
     $userApiDao = $userApiModel->getByAppAndUser('Default', $userDao);
     if(!$userApiDao)
       {
@@ -127,27 +127,27 @@ class Pyslicer_ApiComponent extends AppComponent
     $job->setScript($segmentationPipeline);
     // TODO json encode params set
     $job->setParams(JsonComponent::encode($seed));
-    $jobModel->save($job);    
+    $jobModel->save($job);
     $jobModel->addItemRelation($job, $itemDao, MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT);
 
     if(isset($args['job_name']))
       {
-      $jobName = $args['job_name'];  
+      $jobName = $args['job_name'];
       }
     else
       {
       $jobName = 'Slicer Job ' . $job->getKey();
       }
     $job->setName($jobName);
-    $jobModel->save($job);    
-    
+    $jobModel->save($job);
+
     // TODO store twisted server url in config
     $settingModel = MidasLoader::loadModel('Setting');
     $twistedServerUrl = $settingModel->getValueByName('slicerProxyUrl', 'pyslicer');
-    
+
     // TODO switch to different pipeline types
     $jobInitPath = "/slicerjob/init/";
-    
+
     $midasPath = Zend_Registry::get('webroot');
     $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
     $apiKey = $userApiDao->getApikey();
@@ -177,23 +177,23 @@ class Pyslicer_ApiComponent extends AppComponent
       $requestParams .= $name . '=' . $value;
       $ind++;
       }
-    
+
     $url = $twistedServerUrl . $jobInitPath . '?' . $requestParams;
     // TODO what if the url isn't there?  no server?  what do we get back?
     // we get back false, and should take some appropriate action for the
     // return value here
-    
-    $data = file_get_contents($url);  
-   
-    
+
+    $data = file_get_contents($url);
+
+
     // TODO clean up this redirect code, we are no longer expecting an item id
-    
+
     // if we get back an output item id in the synchronous case, redirect to that
     // regardless of what we get back, should return a redirect URL
     //$outputItemKey = 'output_item_id=';
     if($data === false)
       {
-      throw new Zend_Exception("Cannot connect with Slicer Server.");  
+      throw new Zend_Exception("Cannot connect with Slicer Server.");
       }
     /*elseif(strpos($data, $outputItemKey) === 0)
       {
@@ -209,7 +209,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     }
 
-    
+
   protected function _loadValidItem($userDao, $itemId, $paramName)
     {
     $itemModel = MidasLoader::loadModel('Item');
@@ -224,7 +224,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     return $itemDao;
     }
-   
+
   protected function _findValidOutputFolderId($userDao, $outputFolderId=false)
     {
     $folderModel = MidasLoader::loadModel('Folder');
@@ -236,41 +236,41 @@ class Pyslicer_ApiComponent extends AppComponent
       if($outputFolder === false || !$folderModel->policyCheck($outputFolder, $userDao, MIDAS_POLICY_WRITE))
         {
         $outputFolderId = false;
-        }  
+        }
       }
-    
+
     if(!$outputFolderId)
       {
-      $outputFolderId = $userDao->getFolderId();  
+      $outputFolderId = $userDao->getFolderId();
       }
-      
-    return $outputFolderId;  
+
+    return $outputFolderId;
     }
-      
+
   protected function _getConnectionParams($userDao)
     {
     $userEmail = $userDao->getEmail();
-    
+
     $midasPath = Zend_Registry::get('webroot');
     $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
-    
+
     $userApiModel = MidasLoader::loadModel('Userapi', 'api');
     $userApiDao = $userApiModel->getByAppAndUser('Default', $userDao);
     if(!$userApiDao)
       {
       throw new Zend_Exception('You need to create a web-api key for this user for application: Default');
       }
-    $apiKey = $userApiDao->getApikey();      
-    
+    $apiKey = $userApiDao->getApikey();
+
     return array($userEmail, $apiKey, $midasUrl);
     }
 
-    
+
   // output_item_name will be set in job creation if it does not exist
   // job_name will be set in job creation if it does not exist
   // params will be modified if needed to set output_item_name
   protected function _createJob($userDao, $script, $params, $inputItems, $synthesizedItemNames, $jobName=false)
-    { 
+    {
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
     $job = MidasLoader::newDao('JobDao', 'remoteprocessing');
     $job->setCreatorId($userDao->getUserId());
@@ -288,7 +288,7 @@ class Pyslicer_ApiComponent extends AppComponent
       $jobName = 'Slicer Job ' . $job->getJobId();
       }
     $job->setName($jobName);
-    
+
     // synthesize names for any params if needed
     foreach($synthesizedItemNames as $id => $nameSuffix)
       {
@@ -300,9 +300,9 @@ class Pyslicer_ApiComponent extends AppComponent
         $params[$id] = $outputItemName;
         }
       }
-    
+
     $job->setParams(JsonComponent::encode($params));
-    $jobModel->save($job);    
+    $jobModel->save($job);
     return array($job, $params);
     }
 
@@ -314,7 +314,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $jobInitPath = "/slicerjob/init/";
     // TODO probably a security hole to put the email and api key in the url
     // TODO hardcoded seed
-    list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);    
+    list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);
     $jobParams = array('pipeline' => $script,
                        'url' => $midasUrl,
                        'email' => $userEmail,
@@ -332,19 +332,19 @@ class Pyslicer_ApiComponent extends AppComponent
       $requestParams .= $name . '=' . $value;
       $ind++;
       }
-    
+
     $url = $twistedServerUrl . $jobInitPath . '?' . $requestParams;
     return array($url, $midasUrl);
     }
-   
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
   /**
    * start a fiducial registration job
    * @param fixed_item_id The id of the fixed image item to be processed
@@ -354,9 +354,9 @@ class Pyslicer_ApiComponent extends AppComponent
    * @param transform_type one of [Rigid|Translation|Similarity]
    * @param output_folder_id (optional) The id of the folder to create an output
      folder underneath.  If not supplied the user's Private folder will be used.
-   * @param output_volume_name (optional) The name of the created output volume 
+   * @param output_volume_name (optional) The name of the created output volume
      item.  If not supplied a name like "Slicer_Job_X_output_volume will be created.
-   * @param output_transform_name (optional) The name of the created output transform 
+   * @param output_transform_name (optional) The name of the created output transform
      item.  If not supplied a name like "Slicer_Job_X_output_transform will be created.
    * @param job_name (optional) The name of the processing job, if not supplied,
      will be given a name like "Slicer Job X" where x is the job id.
@@ -364,7 +364,7 @@ class Pyslicer_ApiComponent extends AppComponent
    */
   public function startFiducialregistration($args)
     {
-    $this->_checkKeys(array('fixed_item_id', 'moving_item_id', 'fixed_fiducials', 'moving_fiducials', 'fixed_fiducials', 'transform_type'), $args);    
+    $this->_checkKeys(array('fixed_item_id', 'moving_item_id', 'fixed_fiducials', 'moving_fiducials', 'fixed_fiducials', 'transform_type'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
@@ -375,7 +375,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $movingItem = $this->_loadValidItem($userDao, $args['moving_item_id'], 'moving_item_id');
     $fixedFiducials = JsonComponent::decode($args['fixed_fiducials']);
     $movingFiducials = JsonComponent::decode($args['moving_fiducials']);
-    $outputFolderId = $this->_findValidOutputFolderId($userDao, 
+    $outputFolderId = $this->_findValidOutputFolderId($userDao,
                                                       isset($args['output_folder_id']) ? $args['output_folder_id'] : false);
     $transformType = $args['transform_type'];
     $transforms = array('Rigid', 'Translation', 'Similarity');
@@ -383,7 +383,7 @@ class Pyslicer_ApiComponent extends AppComponent
       {
       throw new Zend_Exception('transform_type must be one of Rigid, Translation or Similarity.');
       }
-    
+
     $inputItems = array($fixedItem, $movingItem);
     $script = MIDAS_PYSLICER_REGISTRATION_PIPELINE;
     $params = array('fixed_item_id' => $fixedItem->getItemId(),
@@ -396,20 +396,20 @@ class Pyslicer_ApiComponent extends AppComponent
                     'output_transform_name' => isset($args['output_transform_name']) ? $args['output_transform_name'] : false);
     $synthesizedItemNames = array('output_volume_name' => '_output_volume',
                                   'output_transform_name' => '_output_transform');
-    
-    // output_volume_name and output_transform_name will be set in job creation 
+
+    // output_volume_name and output_transform_name will be set in job creation
     // if they do not exist
     // job_name will be set in job creation if it does not exist
     list($job, $params) = $this->_createJob($userDao, $script, $params, $inputItems, $synthesizedItemNames,
                              isset($args['job_name']) ? $args['job_name'] : false);
-    
+
     list($jobCreationUrl, $midasUrl) = $this->_constructJobCreationUrl($userDao, $script, $job, $params);
-    
-    $data = file_get_contents($jobCreationUrl);  
-   
+
+    $data = file_get_contents($jobCreationUrl);
+
     if($data === false)
       {
-      throw new Zend_Exception("Cannot connect with Slicer Server.");  
+      throw new Zend_Exception("Cannot connect with Slicer Server.");
       }
     else
       {
@@ -418,8 +418,8 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     }
 
-      
-    
+
+
 
   /**
    * gets the count of jobs for the user on a status category basis
@@ -442,7 +442,7 @@ class Pyslicer_ApiComponent extends AppComponent
                 MIDAS_PYSLICER_REMOTEPROCESSING_JOB_EXCEPTION => 0);
       foreach($jobs as $job)
         {
-        $jobsByStatus[$job->getStatus()]++;  
+        $jobsByStatus[$job->getStatus()]++;
         }
       $jobCounts= array('wait' => $jobsByStatus[MIDAS_REMOTEPROCESSING_STATUS_WAIT],
                         'started' => $jobsByStatus[MIDAS_REMOTEPROCESSING_STATUS_STARTED],
@@ -451,7 +451,7 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     return $jobCounts;
     }
-    
+
   /**
    * update the status of a job
    * @param job_id the id of the job to update
@@ -462,13 +462,13 @@ class Pyslicer_ApiComponent extends AppComponent
    */
   public function updateJob($args)
     {
-    $this->_checkKeys(array('job_id', 'status'), $args);    
+    $this->_checkKeys(array('job_id', 'status'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
       throw new Exception('Anonymous users may not update job statuses', MIDAS_PYSLICER_INVALID_POLICY);
       }
-      
+
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
     $jobId = $args['job_id'];
     $job = $jobModel->load($jobId);
@@ -486,14 +486,14 @@ class Pyslicer_ApiComponent extends AppComponent
 
     if(isset($args['condition']))
       {
-      $condition = $args['condition'];  
+      $condition = $args['condition'];
       $job->setCondition($condition);
       }
     $jobModel->save($job);
-    
+
     return array('success' => 'true');
     }
-    
+
   /**
    * notify a jobstatus that it has occurred
    * @param jobstatus_id the id of the jobstatus to update
@@ -502,7 +502,7 @@ class Pyslicer_ApiComponent extends AppComponent
    */
   public function notifyJobstatus($args)
     {
-    $this->_checkKeys(array('jobstatus_id', 'notify_date'), $args);    
+    $this->_checkKeys(array('jobstatus_id', 'notify_date'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
@@ -516,20 +516,20 @@ class Pyslicer_ApiComponent extends AppComponent
       throw new Zend_Exception('This jobstatus does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
       }
 
-    $job = $jobstatus->getJob();    
+    $job = $jobstatus->getJob();
     if($job->getCreatorId() != $userDao->getUserId())
       {
       throw new Exception('Only the job owner can update an associated jobstatus', MIDAS_PYSLICER_INVALID_POLICY);
       }
-    
+
     $notifyDate = date('Y-m-d H:i:s', $args['notify_date']);
-    $jobstatus->setNotifyDate($notifyDate);  
-    $jobstatusModel->save($jobstatus);      
-      
+    $jobstatus->setNotifyDate($notifyDate);
+    $jobstatusModel->save($jobstatus);
+
     return array('success' => 'true');
     }
-    
-    
+
+
   /**
    * add a json encoded list of eventual events, that have not yet
    * occurred, will create jobstatus for these and return an array
@@ -541,7 +541,7 @@ class Pyslicer_ApiComponent extends AppComponent
    */
   public function addJobstatuses($args)
     {
-    $this->_checkKeys(array('events'), $args);    
+    $this->_checkKeys(array('events'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
@@ -550,7 +550,7 @@ class Pyslicer_ApiComponent extends AppComponent
 
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
     $jobstatusModel = MidasLoader::loadModel('Jobstatus', 'pyslicer');
-    
+
     $events = JsonComponent::decode($args['events']);
     $eventIdsToJobstatusIds = array();
     foreach($events as $event)
@@ -567,7 +567,7 @@ class Pyslicer_ApiComponent extends AppComponent
           $value = $property[1];
           if($name != 'timestamp')
             {
-            $jobstatus->set($property[0], $property[1]);  
+            $jobstatus->set($property[0], $property[1]);
             }
           }
         }
@@ -582,12 +582,12 @@ class Pyslicer_ApiComponent extends AppComponent
         {
         throw new Exception('Only the job owner can update its status', MIDAS_PYSLICER_INVALID_POLICY);
         }
-      $jobstatusModel->save($jobstatus);      
+      $jobstatusModel->save($jobstatus);
       $eventIdsToJobstatusIds[$jobstatus->getEventId()] = $jobstatus->getJobstatusId();
       }
     return $eventIdsToJobstatusIds;
     }
-    
+
   /**
    * will return a job object for a job_id with the current status,
    * along with any related jobstatus objects for that job.
@@ -599,7 +599,7 @@ class Pyslicer_ApiComponent extends AppComponent
    */
   public function getJobstatus($args)
     {
-    $this->_checkKeys(array('job_id'), $args);    
+    $this->_checkKeys(array('job_id'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
@@ -621,14 +621,14 @@ class Pyslicer_ApiComponent extends AppComponent
 
     // get the status details
     $jobstatuses = $jobstatusModel->getForJob($job);
-    
+
     $pipelineComponent = MidasLoader::loadComponent('Pipeline', 'pyslicer');
     $conditionRows = $pipelineComponent->formatJobCondition($job->getCondition());
     $inputsAndOutputs = $pipelineComponent->resolveInputsAndOutputs($job);
-    return array('job' => $job, 'jobstatuses' => $jobstatuses, 'condition_rows' => $conditionRows, 'output_links' => $inputsAndOutputs['outputs']);  
+    return array('job' => $job, 'jobstatuses' => $jobstatuses, 'condition_rows' => $conditionRows, 'output_links' => $inputsAndOutputs['outputs']);
     }
-    
-    
+
+
 
   /**
    * add an output item to a job
@@ -638,13 +638,13 @@ class Pyslicer_ApiComponent extends AppComponent
    */
   public function addJobOutputItem($args)
     {
-    $this->_checkKeys(array('job_id', 'item_id'), $args);    
+    $this->_checkKeys(array('job_id', 'item_id'), $args);
     $userDao = $this->_getUser($args);
     if(!$userDao)
       {
       throw new Exception('Anonymous users may not update jobs', MIDAS_PYSLICER_INVALID_POLICY);
       }
-      
+
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
     $jobId = $args['job_id'];
     $job = $jobModel->load($jobId);
@@ -669,11 +669,7 @@ class Pyslicer_ApiComponent extends AppComponent
 
     return array('success' => 'true');
     }
-    
-    
-    
+
+
+
 } // end class
-
-
-
-
