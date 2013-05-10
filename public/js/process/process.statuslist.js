@@ -14,8 +14,8 @@ $(document).ready(function(){
         midas.showDialog('Browse for the Image to be Segmented');
 
         midas.pyslicer.statuslist.itemSelectionCallback = function(name, id) {
-            var redirectUrl = $('.webroot').val() + '/visualize/paraview/slice?itemId=' + id;
-            redirectUrl += '&operations=pointSelect&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/visualize.pointSelect.js';
+            var redirectUrl = $('.webroot').val() + '/pvw/paraview/slice?itemId=' + id;
+            redirectUrl += '&operations=pointSelect&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/pvw.pointSelect.js';
             window.location = redirectUrl;
         };
     });

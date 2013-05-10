@@ -59,8 +59,8 @@ class Pyslicer_PipelineComponent extends AppComponent
   function segmentationInputLinks($job, $inputs, $outputs, $midasPath)
     {
     $inputItemId = $inputs[0]->getItemId();
-    $volumeView = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId;
-    $sliceView = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId;
+    $volumeView = $midasPath . '/pvw/paraview/volume?itemId='.$inputItemId;
+    $sliceView = $midasPath . '/pvw/paraview/slice?itemId='.$inputItemId;
 
     return array( array ('text' => 'slice view', 'url' => $sliceView),
                   array ('text' => 'volume view', 'url' => $volumeView));
@@ -71,9 +71,9 @@ class Pyslicer_PipelineComponent extends AppComponent
     $inputItemId = $inputs[0]->getItemId();
     $outputItemId = $outputs[0]->getItemId();
     
-    $meshView = $midasPath . '/visualize/paraview/surface?itemId='.$outputItemId;
-    $sliceView = $midasPath . '/visualize/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports='.$midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
-    $volumeView = $midasPath . '/visualize/paraview/volume?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports='.$midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
+    $meshView = $midasPath . '/pvw/paraview/surface?itemId='.$outputItemId;
+    $sliceView = $midasPath . '/pvw/paraview/slice?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports='.$midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
+    $volumeView = $midasPath . '/pvw/paraview/volume?itemId='.$inputItemId.'&meshes='.$outputItemId.'&jsImports='.$midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
         
     return array( array ('text' => 'model mesh view', 'url' => $meshView),
                   array ('text' => 'slice view', 'url' => $sliceView),
