@@ -8,7 +8,7 @@ $(document).ready(function(){
     $('a.paramsLink').click(function () {
         midas.showDialogWithContent('Job Parameters', $(this).attr('qtip'), false);
     });
-        
+
     $('a#segmentation').click(function() {
         midas.loadDialog("selectitem_volumeRendering","/browse/selectitem");
         midas.showDialog('Browse for the Image to be Segmented');
@@ -19,8 +19,8 @@ $(document).ready(function(){
             window.location = redirectUrl;
         };
     });
-    
-    
+
+
     $('a#registration').click(function() {
         midas.loadDialog("selectitem_registration_fixed","/browse/selectitem");
         midas.showDialog('Browse for the Registration Fixed Image');
@@ -34,6 +34,17 @@ $(document).ready(function(){
                 redirectUrl += '&right=' + movingId + '&operations=pointMap&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/visualize.landmarkRegistration.js';
                 window.location = redirectUrl;
             };
+        };
+    });
+
+    $('a#pdfsegmentation').click(function() {
+        midas.loadDialog("selectitem_volumeRendering","/browse/selectitem");
+        midas.showDialog('Browse for the Image to be Segmented');
+
+        midas.pyslicer.statuslist.itemSelectionCallback = function(name, id) {
+            var redirectUrl = $('.webroot').val() + '/pvw/paraview/slice?itemId=' + id;
+            redirectUrl += '&operations=paint&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/pvw.paint.js';
+            window.location = redirectUrl;
         };
     });
 

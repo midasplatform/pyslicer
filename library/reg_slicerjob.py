@@ -9,6 +9,7 @@ import slicer_utils
 class SlicerReg(SlicerJob):
     """This class implements a job executed in Slicer's Python environment: 
     simple region growing registration"""
+    # TODO run this pipeline using pvw module instead of visualize module
     loaded_input_volumes = "Loaded Input Volumes"
     finished_registration = "Finished Registration"
     wrote_transformed_volume = "Wrote Transformed Volume"

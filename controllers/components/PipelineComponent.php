@@ -45,7 +45,12 @@ class Pyslicer_PipelineComponent extends AppComponent
            MIDAS_PYSLICER_EXPECTED_INPUTS => MIDAS_PYSLICER_REGISTRATION_INPUT_COUNT,
            MIDAS_PYSLICER_EXPECTED_OUTPUTS => MIDAS_PYSLICER_REGISTRATION_OUTPUT_COUNT,
            MIDAS_PYSLICER_INPUT_GENERATOR => 'registrationInputLinks',
-           MIDAS_PYSLICER_OUTPUT_GENERATOR => 'registrationOutputLinks'));
+           MIDAS_PYSLICER_OUTPUT_GENERATOR => 'registrationOutputLinks'),
+        MIDAS_PYSLICER_PDF_SEGMENTATION_PIPELINE => array(
+           MIDAS_PYSLICER_EXPECTED_INPUTS => MIDAS_PYSLICER_PDFSEGMENTATION_INPUT_COUNT,
+           MIDAS_PYSLICER_EXPECTED_OUTPUTS => MIDAS_PYSLICER_PDFSEGMENTATION_OUTPUT_COUNT,
+           MIDAS_PYSLICER_INPUT_GENERATOR => 'pdfsegmentationInputLinks',
+           MIDAS_PYSLICER_OUTPUT_GENERATOR => 'pdfsegmentationOutputLinks'),);
 
   protected $missingInputs = array( array ('text' => 'Error: missing input', 'url' => ''));
   protected $missingOutputs = array( array ('text' => 'Error: missing output', 'url' => ''));
@@ -58,7 +63,7 @@ class Pyslicer_PipelineComponent extends AppComponent
 
   function segmentationInputLinks($job, $inputs, $outputs, $midasPath)
     {
-    $inputItemId = $inputs[0]->getItemId();
+    $inputItemId = $inputs[MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM]->getItemId();
     $volumeView = $midasPath . '/pvw/paraview/volume?itemId='.$inputItemId;
     $sliceView = $midasPath . '/pvw/paraview/slice?itemId='.$inputItemId;
 
@@ -120,6 +125,46 @@ class Pyslicer_PipelineComponent extends AppComponent
     return array( array ('text' => $outputLinkText, 'url' => $outputLink));
     }
 
+  function pdfsegmentationInputLinks($job, $inputs, $outputs, $midasPath)
+    {
+    $inputItemId = $inputs[MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM]->getItemId();
+    // Initial label map
+    $inputLabelmapItemId =
+      $inputs[MIDAS_PYSLICER_RELATION_TYPE_INPUT_LABELMAP]->getItemId();
+    $volumeView = $midasPath . '/pvw/paraview/volume?itemId='.$inputItemId;
+    $labelmapSliceView = $midasPath . '/pvw/paraview/slice?itemId=' .
+      $inputItemId . '&labelmaps=' . $inputLabelmapItemId;
+
+    return array( array ('text' => 'slice view (with initial labelmap)', 'url' => $labelmapSliceView),
+                  array ('text' => 'volume view', 'url' => $volumeView));
+    }
+
+  function pdfsegmentationOutputLinks($job, $inputs, $outputs, $midasPath)
+    {
+    $inputItemId = $inputs[MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM]->getItemId();
+    // Surface model of output label map
+    $outputModelItemId =
+      $outputs[MIDAS_PYSLICER_RELATION_TYPE_OUTPUT_SURFACE_MODEL]->getItemId();
+    // Output label map
+    $outputLabelmapItemId =
+      $outputs[MIDAS_PYSLICER_RELATION_TYPE_OUTPUT_LABELMAP]->getItemId();
+
+    $meshView = $midasPath . '/pvw/paraview/surface?itemId=' . $outputModelItemId;
+    $sliceView = $midasPath . '/pvw/paraview/slice?itemId=' . $inputItemId .
+      '&meshes=' . $outputModelItemId . '&jsImports=' .
+       $midasPath . '/modules/pyslicer/public/js/lib/visualize.meshView.js';
+    $volumeView = $midasPath . '/pvw/paraview/volume?itemId=' . $inputItemId .
+      '&meshes=' . $outputModelItemId . '&jsImports=' .
+      $midasPath.'/modules/pyslicer/public/js/lib/visualize.meshView.js';
+    $labelmapSliceView = $midasPath . '/pvw/paraview/slice?itemId=' .
+      $inputItemId . '&labelmaps=' . $outputLabelmapItemId;
+
+    return array( array ('text' => 'surface model mesh view', 'url' => $meshView),
+                  array ('text' => 'surface model contour slice view', 'url' => $sliceView),
+                  array ('text' => 'surface model volume view', 'url' => $volumeView),
+                  array ('text' => 'label map slice view', 'url' => $labelmapSliceView));
+    }
+
   public function resolveInputsAndOutputs($job)
     {
     $midasPath = Zend_Registry::get('webroot');
@@ -129,13 +174,16 @@ class Pyslicer_PipelineComponent extends AppComponent
     $relatedItems = $jobModel->getRelatedItems($job);
     foreach($relatedItems as $item)
       {
-      if($item->getType() == MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT)
+      $itemType = $item->getType();
+      if($itemType == MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM ||
+         $itemType == MIDAS_PYSLICER_RELATION_TYPE_INPUT_LABELMAP)
         {
-        $inputs[] = $item;
+        $inputs[$itemType] = $item;
         }
-      elseif($item->getType() == MIDAS_REMOTEPROCESSING_RELATION_TYPE_OUPUT)
+      elseif($itemType == MIDAS_PYSLICER_RELATION_TYPE_OUTPUT_LABELMAP ||
+             $itemType == MIDAS_PYSLICER_RELATION_TYPE_OUTPUT_SURFACE_MODEL)
         {
-        $outputs[] = $item;
+        $outputs[$itemType] = $item;
         }
       }
 

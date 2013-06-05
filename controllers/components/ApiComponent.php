@@ -108,14 +108,7 @@ class Pyslicer_ApiComponent extends AppComponent
       throw new Zend_Exception('Write access on this folder required.', MIDAS_PYSLICER_INVALID_POLICY);
       }
 
-    $userEmail = $userDao->getEmail();
-    // get an api key for this user
-    $userApiModel = MidasLoader::loadModel('Userapi');
-    $userApiDao = $userApiModel->getByAppAndUser('Default', $userDao);
-    if(!$userApiDao)
-      {
-      throw new Zend_Exception('You need to create a web-api key for this user for application: Default');
-      }
+    list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);
 
     // TODO store remote processing job info
     $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
@@ -128,7 +121,7 @@ class Pyslicer_ApiComponent extends AppComponent
     // TODO json encode params set
     $job->setParams(JsonComponent::encode($seed));
     $jobModel->save($job);
-    $jobModel->addItemRelation($job, $itemDao, MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT);
+    $jobModel->addItemRelation($job, $itemDao, MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM);
 
     if(isset($args['job_name']))
       {
@@ -148,9 +141,6 @@ class Pyslicer_ApiComponent extends AppComponent
     // TODO switch to different pipeline types
     $jobInitPath = "/slicerjob/init/";
 
-    $midasPath = Zend_Registry::get('webroot');
-    $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
-    $apiKey = $userApiDao->getApikey();
     $parentFolderId = $parentFolder->getFolderId();
 
     // TODO probably a security hole to put the email and api key in the url
@@ -209,6 +199,165 @@ class Pyslicer_ApiComponent extends AppComponent
       }
     }
 
+  /**
+   * Get Pydas required parameters from current session
+   * @return array(email => pydas_email,
+   *               apikey => pydas_apikey,
+   *               url => midas_url)
+   */
+   public function getPydasParams()
+     {
+     $userDao = Zend_Registry::get('userSession')->Dao;
+     if(!$userDao)
+       {
+       throw new Exception('Anonymous users cannot use Pydas', MIDAS_PYSLICER_INVALID_POLICY);
+       }
+     list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);
+     return array('email' => $userEmail,
+                  'apikey' => $apiKey,
+                  'url' => $midasUrl);
+     }
+
+  /**
+   * Start TubeTK PDF segmenation on an item using the initial labelmap
+   * @param item_id The id of the item to be segmented
+   * @param labelmap_item_id The id of input label map item
+   * @param output_item_name The name of the created output surface model
+   * @param output_labelmap The name of the created output label map
+   * @param output_folder_id (optional) The id of the folder where the output
+   * items be created; if not supplied, the first parent folder found on the
+   * input item will be used as the output folder.
+   * @param job_name (optional) The name of the processing job, if not supplied,
+   * will be given a name like "Slicer Job X" where x is the job id.
+   * @return array(redirect => Url to show this job's status)
+   */
+  public function startPdfsegmentation($args)
+    {
+    $this->_checkKeys(array('item_id', 'labelmap_item_id', 'output_item_name',
+      'output_labelmap'), $args);
+    $userDao = $this->_getUser($args);
+    if(!$userDao)
+      {
+      throw new Exception('Anonymous users may not process items', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    $itemModel = MidasLoader::loadModel('Item');
+    $folderModel = MidasLoader::loadModel('Folder');
+
+    $itemId = $args['item_id'];
+    $labelmapItemId = $args['labelmap_item_id'];
+    $outputItemName = $args['output_item_name'];
+    $outputLabelmap = $args['output_labelmap'];
+
+    // Check the input item
+    $itemDao = $itemModel->load($itemId);
+    if($itemDao === false)
+      {
+      throw new Zend_Exception('This item does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+    if(!$itemModel->policyCheck($itemDao, $userDao, MIDAS_POLICY_READ))
+      {
+      throw new Zend_Exception('Read access on this item required.', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+    // Check the input labelmap item
+    $labelmapItemDao = $itemModel->load($labelmapItemId);
+    if($labelmapItemDao === false)
+      {
+      throw new Zend_Exception('This input labelmap item does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+    if(!$itemModel->policyCheck($labelmapItemDao, $userDao, MIDAS_POLICY_READ))
+      {
+      throw new Zend_Exception('Read access on the input labelmap item required.', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    // Check the output folder
+    if(isset($args['output_folder_id']))
+      {
+      $outputFolderId = $args['output_folder_id'];
+      $parentFolder = $folderModel->load($outputFolderId);
+      }
+    else
+      {
+      $parentFolders = $itemDao->getFolders();
+      $parentFolder = $parentFolders[0];
+      }
+    if($parentFolder === false)
+      {
+      throw new Zend_Exception('This output folder does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+    if(!$folderModel->policyCheck($parentFolder, $userDao, MIDAS_POLICY_WRITE))
+      {
+      throw new Zend_Exception('Write access on this folder required.', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    // Get pydas required parameters
+    list($userEmail, $apiKey, $midasUrl) = $this->_getConnectionParams($userDao);
+
+    // Create a job and add input items
+    $jobModel = MidasLoader::loadModel('Job', 'remoteprocessing');
+    $job = MidasLoader::newDao('JobDao', 'remoteprocessing');
+    $job->setCreatorId($userDao->getUserId());
+    $job->setStatus(MIDAS_REMOTEPROCESSING_STATUS_WAIT);
+    $segmentationPipeline = 'pdfsegmentation';
+    $job->setScript($segmentationPipeline);
+    $jobModel->save($job);
+    $jobModel->addItemRelation($job, $itemDao, MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM);
+    $jobModel->addItemRelation($job, $labelmapItemDao, MIDAS_PYSLICER_RELATION_TYPE_INPUT_LABELMAP);
+
+    if(isset($args['job_name']))
+      {
+      $jobName = $args['job_name'];
+      }
+    else
+      {
+      $jobName = 'Slicer Job ' . $job->getKey();
+      }
+    $job->setName($jobName);
+    $jobModel->save($job);
+
+    $settingModel = MidasLoader::loadModel('Setting');
+    $twistedServerUrl = $settingModel->getValueByName('slicerProxyUrl', 'pyslicer');
+
+    $jobInitPath = "/slicerjob/init/";
+    $parentFolderId = $parentFolder->getFolderId();
+
+    // Construct URL to be sent to Twisted server
+    $slicerjobParams = array('pipeline' => $segmentationPipeline,
+                             'url' => $midasUrl,
+                             'email' => $userEmail,
+                             'apikey' => $apiKey,
+                             'inputitemid' => $itemId,
+                             'inputlabelmapid' => $labelmapItemId,
+                             'outputfolderid' => $parentFolderId,
+                             'outputitemname' => $outputItemName,
+                             'outputlabelmap' => $outputLabelmap,
+                             'job_id' => $job->getKey());
+    $requestParams = "";
+    $ind = 0;
+    foreach ($slicerjobParams as $name => $value)
+      {
+      if ($ind > 0)
+        {
+        $requestParams .= "&";
+        }
+      $requestParams .= $name . '=' . $value;
+      $ind++;
+      }
+
+    $url = $twistedServerUrl . $jobInitPath . '?' . $requestParams;
+    // Send request to Twisted Server
+    $data = file_get_contents($url);
+    if($data === false)
+      {
+      throw new Zend_Exception("Cannot connect with Slicer Server.");
+      }
+    else
+      {
+      $redirectURL = $midasUrl . '/pyslicer/process/status?jobId='.$job->getJobId();
+      return array('redirect' => $redirectURL);
+      }
+    }
+
 
   protected function _loadValidItem($userDao, $itemId, $paramName)
     {
@@ -254,7 +403,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $midasPath = Zend_Registry::get('webroot');
     $midasUrl = 'http://' . $_SERVER['HTTP_HOST'] . $midasPath;
 
-    $userApiModel = MidasLoader::loadModel('Userapi', 'api');
+    $userApiModel = MidasLoader::loadModel('Userapi');
     $userApiDao = $userApiModel->getByAppAndUser('Default', $userDao);
     if(!$userApiDao)
       {
@@ -279,7 +428,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $jobModel->save($job);
     foreach($inputItems as $itemDao)
       {
-      $jobModel->addItemRelation($job, $itemDao, MIDAS_REMOTEPROCESSING_RELATION_TYPE_INPUT);
+      $jobModel->addItemRelation($job, $itemDao, MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM);
       }
 
     // now that a job id is defined...
@@ -645,6 +794,8 @@ class Pyslicer_ApiComponent extends AppComponent
    * add an output item to a job
    * @param job_id the id of the job to update
    * @param item_id the id of the item to set as an output of the job
+   * @param type(Optional) output item types
+   * (currently only support two types: 'surface_model' (default), 'labelmap')
    * @return array('success' => 'true') if successful.
    */
   public function addJobOutputItem($args)
@@ -676,7 +827,14 @@ class Pyslicer_ApiComponent extends AppComponent
       throw new Zend_Exception('This item does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
       }
 
-    $jobModel->addItemRelation($job, $item, MIDAS_REMOTEPROCESSING_RELATION_TYPE_OUPUT);
+    if(array_key_exists('type', $args) && $args['type'] == 'labelmap')
+      {
+      $jobModel->addItemRelation($job, $item, MIDAS_PYSLICER_RELATION_TYPE_OUTPUT_LABELMAP);
+      }
+    else
+      {
+      $jobModel->addItemRelation($job, $item, MIDAS_PYSLICER_RELATION_TYPE_OUTPUT_SURFACE_MODEL);
+      }
 
     return array('success' => 'true');
     }

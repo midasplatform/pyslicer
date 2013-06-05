@@ -84,7 +84,7 @@ class SlicerSeg(SlicerJob):
             self.process() 
             slicer.app.exit()
             self.jobEndingNotification()
-        except Exception as exception:
+        except StandardError as exception:
             # TODO where to do exceptions status and conditions
             #self.log.exception(exception)
             import traceback

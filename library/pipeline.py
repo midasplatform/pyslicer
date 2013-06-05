@@ -63,6 +63,9 @@ class PipelineFactory():
             return SegPipeline(pipelineName, jobId, pydasParams, tmpDirRoot, args)
         elif pipelineName == 'registration':
             return RegPipeline(pipelineName, jobId, pydasParams, tmpDirRoot, args)
+        elif pipelineName == 'pdfsegmentation':
+            return PdfSegPipeline(pipelineName, jobId, pydasParams, tmpDirRoot, args)
+
         else:
             return None
 
@@ -73,6 +76,8 @@ class PipelineFactory():
             return 'seg_slicerjob.py'
         elif pipelineName == 'registration':
             return 'reg_slicerjob.py'
+        elif pipelineName == 'pdfsegmentation':
+            return 'pdfseg_slicerjob.py'
         else:
             return None
 
@@ -238,7 +243,8 @@ class Pipeline():
         self.dataDir = os.path.join(self.tmpdirpath, 'data')
         self.outDir = os.path.join(self.tmpdirpath, 'out')
         
-    def uploadItem(self, itemName, outputFolderId, srcDir=None, outFile=None, itemDescription=None):
+    def uploadItem(self, itemName, outputFolderId, srcDir=None, outFile=None,
+                   itemDescription=None, type=None):
         """Read everything in the srcDir and upload it as a single item. If 
         outFile is set, only upload that file"""
         (email, apiKey, url) = self.pydasParams
@@ -273,6 +279,8 @@ class Pipeline():
         parameters['token'] = pydas.session.token
         parameters['job_id'] = self.jobId
         parameters['item_id'] = itemId
+        if type is not None:
+            parameters['type'] = type
         print parameters
         pydas.session.communicator.request(method, parameters) 
         return itemId
@@ -454,3 +462,77 @@ class RegPipeline(Pipeline):
         itemId = self.uploadItem(self.outputVolumeName, folderId, self.transformed_volume, itemDescription='output volume')
         itemId = self.uploadItem(self.outputTransformName, folderId, self.transform, itemDescription='output transform')
 
+
+class PdfSegPipeline(Pipeline):
+    """This class implements a pipeline for TubeTK PDF segmentation."""
+    loaded_input_volume = "Loaded Input Volume"
+    loaded_label_map = "Loaded Input Label Map"
+    started_segmentation = "Starting Segmentation"
+    finished_segmentation = "Finished Segmentation"
+    wrote_segmentation_output = "Wrote Segmentation Output"
+    started_modelmaker = "Starting Modelmaker"
+    finished_modelmaker = "Finished Modelmaker"
+    wrote_model_output = "Wrote Model Output"
+
+    def __init__(self, pipelineName, jobId, pydasParams, tmpDirRoot, json_args):
+        Pipeline.__init__(self, pipelineName, jobId, pydasParams, tmpDirRoot)
+        print json_args
+        if 'inputitemid' in json_args:
+            self.itemId = json_args['inputitemid'][0]
+            self.labelMapItemId = json_args['inputlabelmapid'][0]
+        if 'outputitemname' in json_args:
+            self.outputItemName = json_args['outputitemname'][0]
+            self.outputLabelMap = json_args['outputlabelmap'][0]
+            self.outputFolderId = json_args['outputfolderid'][0]
+
+    def define_process_events(self):
+        """Define the process events for TubeTK PDF segmentation."""
+        process_events = [self.loaded_input_volume, self.loaded_label_map, 
+            self.started_segmentation, self.finished_segmentation,
+            self.wrote_segmentation_output, self.started_modelmaker,
+            self.finished_modelmaker, self.wrote_model_output]
+        process_events = [self.create_process_event(event_type) for event_type in process_events]
+        print process_events
+        return process_events
+
+    def downloadInputImpl(self):
+        """Download input item and initial label map from the Midas server."""
+        self.tempfiles = {}
+        self.tempfiles['inputfile'] = self.downloadItem(self.itemId)
+        self.tempfiles['inputlabelmap'] = self.downloadItem(self.labelMapItemId)
+        print self.tempfiles
+
+    def uploadOutputImpl(self):
+        """Upload output labelmap and its surface model to the Midas server."""
+        # Upload output labelmap file (its type is 'labelmap')
+        self.outLabelMapFile =  self.outputLabelMap + '.mha'
+        os.mkdir(os.path.join(self.outDir, "labelmap"))
+        labelMapTmpDir = os.path.join(self.outDir, "labelmap")
+        shutil.copy(os.path.join(self.outDir, self.outLabelMapFile), labelMapTmpDir)
+        labelmapItemId = self.uploadItem(self.outLabelMapFile, self.outputFolderId, srcDir=labelMapTmpDir, type='labelmap')
+        # Upload outpuf surface model file (default type)
+        self.outFile = self.outputItemName + '.vtp'
+        os.mkdir(os.path.join(self.outDir, "outfile"))
+        outFileTmpDir = os.path.join(self.outDir, "outfile")
+        shutil.copy(os.path.join(self.outDir, self.outFile), outFileTmpDir)
+        itemId = self.uploadItem(self.outFile, self.outputFolderId, srcDir=outFileTmpDir)
+        (email, apiKey, url) = self.pydasParams
+        pydas.login(email=email, api_key=apiKey, url=url)
+        # Set metadata on the output item
+        method = 'midas.item.setmultiplemetadata'
+        parameters = {}
+        parameters['token'] = pydas.session.token
+        parameters['itemid'] = itemId
+        parameters['count'] = 2
+        # Use red to display the input seed and the contour of the output 
+        # surface model in ParaView
+        parameters['element_1'] = 'ParaView'
+        parameters['qualifier_1'] = 'DiffuseColor'
+        parameters['value_1'] = '[1.0,0.0,0.0]'
+        # In ParaView, use [180, 180, 0] orientation to display the surface model 
+        # which is generated by Slicer's model maker
+        parameters['element_2'] = 'ParaView'
+        parameters['qualifier_2'] = 'Orientation'
+        parameters['value_2'] = '[180.0,180.0,0.0]'
+        print parameters
+        pydas.session.communicator.request(method, parameters)
