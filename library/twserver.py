@@ -34,12 +34,13 @@ class SlicerjobReportStatus(Resource):
     isLeaf = True
     
     def _report_status(self, request):
+        """Callback function to report pipeline status event to the Midas server"""
         print request.args
         print "SlicerjobReportStatus"
         if 'pipeline' in request.args and 'job_id' in request.args:
             jobId = request.args['job_id'][0]
             pipelineName = request.args['pipeline'][0]
-            tmpDir = os.getcwd();
+            tmpDir = os.getcwd()
             pydasParams = (request.args['email'][0], request.args['apikey'][0], request.args['url'][0])
             pipelinefactory = PipelineFactory()
             pipeline = pipelinefactory.getPipeline(pipelineName, jobId, pydasParams, tmpDir, request.args)
@@ -55,6 +56,7 @@ class SlicerjobReportStatus(Resource):
             request.finish()
 
     def render_GET(self, request):
+        """Handle report job status request asynchronously """
         reactor.callLater(0, self._report_status, request)
         return NOT_DONE_YET
 
@@ -65,19 +67,21 @@ class SlicerjobInit(Resource):
         self.jobManager = jobManager
     
     def _download_process(self, request):
+        """Callback function to download input file(s) from the Midas server, 
+        and then start the slicer job"""
         print request.args
         print "SlicerjobInit download"
         request.write('init job')
         if 'pipeline' in request.args and 'job_id' in request.args:
-            print "YES"
             jobId = request.args['job_id'][0]
             pipelineName = request.args['pipeline'][0]
             print ">>>>>>>>>>>>>>>>>>>>>>TWSERVER starting SlicerProcess"
-            tmpDir = os.getcwd();
+            tmpDir = os.getcwd()
             pydasParams = (request.args['email'][0], request.args['apikey'][0], request.args['url'][0])
-            print pydasParams;
+            print pydasParams
             request.write("\nstarted job " + str(jobId))
             request.write("\nstarted downloading item(s)")
+            # Call pipeline's executeDownload function to do the real download
             pipelinefactory = PipelineFactory()
             pipeline = pipelinefactory.getPipeline(pipelineName, jobId, pydasParams, tmpDir, request.args)
             (self.dataDir, self.outDir, self.inputfiles) = pipeline.executeDownload()
@@ -85,9 +89,11 @@ class SlicerjobInit(Resource):
             request.args['proxyurl'] = [self.jobManager.proxyurl]
             request.args['data_dir'] = [self.dataDir]
             request.args['out_dir'] = [self.outDir]
+            # Add the input files into the parameters
             for k, v in self.inputfiles.items():
-                request.args[k] = [v] # save value in a list as other reqeust parameters
+                request.args[k] = [v]
             request.write("\nstarted processing item(s) ")
+            # Create a new process for the Slicer job asynchronously
             slicerJob = SlicerProcess(self.jobManager, jobId, pipelineName, request.args)
             d = defer.Deferred()
             reactor.callLater(0, d.callback, None)
@@ -97,6 +103,7 @@ class SlicerjobInit(Resource):
             request.finish()
 
     def render_GET(self, request):
+        """Handle job init request asynchronously"""
         reactor.callLater(0, self._download_process, request)
         return NOT_DONE_YET
 
@@ -106,18 +113,19 @@ class SlicerjobFinish(Resource):
     isLeaf = True
 
     def _upload(self, request):
+        """Callback function to upload output file(s) to the Midas server, 
+        and then start the slicer job"""
         print request.args
         print "SlicerjobFinish"
         request.write('Upload output')
         if 'pipeline' in request.args and 'job_id' in request.args:
-             print "YES"
              jobId = request.args['job_id'][0]
              pipelineName = request.args['pipeline'][0]
              print ">>>>>>>>>>>>>>>>>>>>>>TWSERVER finishing SlicerProcess"
-             tmpDir = os.getcwd();
-             print tmpDir
+             tmpDir = os.getcwd()
              pydasParams = (request.args['email'][0], request.args['apikey'][0], request.args['url'][0])
              response = "\nstarted uploading output item"
+             # Call pipeline's executeUpload function to do the real upload
              pipelinefactory = PipelineFactory()
              pipeline = pipelinefactory.getPipeline(pipelineName, jobId, pydasParams, tmpDir, request.args)
              pipeline.executeUpload()
@@ -128,6 +136,7 @@ class SlicerjobFinish(Resource):
             request.finish()
     
     def render_GET(self, request):
+        """Handle job ennding request asynchronously"""
         reactor.callLater(0, self._upload, request)
         return NOT_DONE_YET
 
@@ -139,22 +148,20 @@ class SlicerjobFinish(Resource):
 
 if __name__ == '__main__':
     # read the config file for slicer_path
-    configFile = open('twserver.cfg')
     config = {}
-    for line in configFile:
-        line = line.strip()
-        if line is not None and line != '':
-            cols = line.split('=')
-            config[cols[0]] = cols[1]
-    configFile.close()
-    import os
+    with open('twserver.cfg') as config_file:
+        for line in config_file.readlines():
+            line = line.strip()
+            if line is not None and line != '':
+                cols = line.split('=')
+                config[cols[0]] = cols[1]
     if 'slicer_path' not in config or not os.path.isfile(config['slicer_path']):
         print "You must specify the path to the Slicer exe as slicer_path in twserver.cfg"
         exit(1)
     if 'proxy_url' not in config:
         print "You must specify the Slicer Proxy Server URL"
         exit(1)
-    # set current dir as temp working dir
+    # Set current directory as temporary working directory
     jobManager = SlicerProcessJobManager(os.getcwd(), config['slicer_path'], config['proxy_url'])
     root = ServerRoot()
     slicerjobRoot = Slicerjob()
@@ -165,5 +172,6 @@ if __name__ == '__main__':
     slicerjobRoot.putChild('init', slicerjobInit)
     slicerjobRoot.putChild('finish', slicerjobFinish)
     slicerjobRoot.putChild('reportstatus', slicerjobReportStatus)
+    # Start Twisted server
     reactor.listenTCP(8880, server.Site(root))
     reactor.run()

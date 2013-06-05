@@ -593,10 +593,11 @@ class Pyslicer_ApiComponent extends AppComponent
    * along with any related jobstatus objects for that job.
    * @param job_id the id of the job to query status for.
    * @param status_only (Optional) If set, will only return the array of jobstatus objects
-   * @return array ('job' => the job object,
-                    'jobstatuses' => the array of jobstatus objects,
-                    'condition_rows' => array of job condition lines, if any,
-                    'output_links' => array of output links for this job, if any).
+   * @return if status_only is not set: array ('job' => the job object,
+   *           'jobstatuses' => the array of jobstatus objects,
+   *           'condition_rows' => array of job condition lines, if any,
+   *           'output_links' => array of output links for this job, if any);
+   *         if status_only is set: the array of jobstatus objects
    */
   public function getJobstatus($args)
     {
@@ -622,7 +623,7 @@ class Pyslicer_ApiComponent extends AppComponent
 
     // get the status details
     $jobstatuses = $jobstatusModel->getForJob($job);
-    
+
     if(array_key_exists('status_only', $args))
       {
       return $jobstatuses;
@@ -632,7 +633,9 @@ class Pyslicer_ApiComponent extends AppComponent
       $pipelineComponent = MidasLoader::loadComponent('Pipeline', 'pyslicer');
       $conditionRows = $pipelineComponent->formatJobCondition($job->getCondition());
       $inputsAndOutputs = $pipelineComponent->resolveInputsAndOutputs($job);
-      return array('job' => $job, 'jobstatuses' => $jobstatuses, 'condition_rows' => $conditionRows, 'output_links' => $inputsAndOutputs['outputs']);
+      return array('job' => $job, 'jobstatuses' => $jobstatuses,
+                   'condition_rows' => $conditionRows,
+                   'output_links' => $inputsAndOutputs['outputs']);
       }
     }
 

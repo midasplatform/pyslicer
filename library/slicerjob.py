@@ -17,18 +17,23 @@ class SlicerJob():
         self.proxyurl = proxyurl
     
     def report_status(self, eventType, message):
+        """Send the pipeline status event information to the Twisted Server and 
+        let it report the status event to the Midas server."""
         args = {}
         args['pipeline'] = self.pipelineName
         args['job_id'] = self.jobId
         (args['email'], args['apikey'], args['url']) = self.pydasParams
         args['event_type'] = eventType
         args['message'] = message
+        # By default, Python requests module is not available in Slicer's python environment
         data = urllib.urlencode(args)
         request = urllib2.Request(self.proxyurl + "slicerjob/reportstatus?" + data)
         response = urllib2.urlopen(request)
         print response
     
     def jobEndingNotification(self, args=None):
+        """Send the pipeline ending information to the Twisted Server, and let 
+        it report the status event and upload the output to the Midas server."""
         if args is not None:
             reqArgs = args.copy()
         else:

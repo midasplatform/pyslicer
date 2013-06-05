@@ -1,21 +1,26 @@
-from __main__ import vtk, slicer
 import os
 import json
+
+import vtk, slicer
+
 from slicerjob import SlicerJob
 import slicer_utils
 
 class SlicerReg(SlicerJob):
-    """This class implements a job executed in Slicer's Python environment - simple region growing registration"""
+    """This class implements a job executed in Slicer's Python environment: 
+    simple region growing registration"""
     loaded_input_volumes = "Loaded Input Volumes"
     finished_registration = "Finished Registration"
     wrote_transformed_volume = "Wrote Transformed Volume"
     wrote_transform = "Wrote Transform"
-    
-    def __init__(self, jobId, pipelineName, pydasParams, tmpDirRoot, dataDir, outDir, proxyurl, 
-                 fixedVolumeFile, movingVolumeFile, fixedItemId, movingItemId, 
-                 fixedFiducialsList, movingFiducialsList, transformType,
-                 outputFolderId, outputVolumeName, outputTransformName):
-        SlicerJob.__init__(self, jobId, pipelineName, pydasParams, tmpDirRoot, dataDir, outDir, proxyurl)
+
+    def __init__(self, jobId, pipelineName, pydasParams, tmpDirRoot, dataDir,
+                 outDir, proxyurl, fixedVolumeFile, movingVolumeFile,
+                 fixedItemId, movingItemId, fixedFiducialsList,
+                 movingFiducialsList, transformType, outputFolderId,
+                 outputVolumeName, outputTransformName):
+        SlicerJob.__init__(self, jobId, pipelineName, pydasParams, tmpDirRoot,
+            dataDir, outDir, proxyurl)
         self.fixedVolumeFile = fixedVolumeFile
         self.movingVolumeFile = movingVolumeFile
         self.fixedItemId = fixedItemId
@@ -27,7 +32,7 @@ class SlicerReg(SlicerJob):
         self.outputVolumeName = outputVolumeName
         self.outputTransformName = outputTransformName
 
-    def parseSeedpointsList(self, seedpointsList):    
+    def parseSeedpointsList(self, seedpointsList):
         print 'parseSeedpointsList'
         #print seedpointsList
         #print type(seedpointsList)
@@ -41,6 +46,7 @@ class SlicerReg(SlicerJob):
         #types = [type(seed) for seed in seedpointsList]
         #print types 
         # TODO something better, email from jc
+        # Keep original comments as above
         seedpoints = [(-1 * x, -1 * y, z) for (x, y, z) in seedpointsList]
         return seedpoints
     
@@ -92,15 +98,19 @@ if __name__ == '__main__':
     print 'reg pipeline', sys.argv
     (script, jobId, tmpDirRoot, jsonArgs) = sys.argv
     argMap = json.loads(jsonArgs)
-    #print argMap
+
     pydasParams = (argMap['email'][0], argMap['apikey'][0], argMap['url'][0])
-    (fixedItemId, movingItemId, fixedFiducialsList, movingFiducialsList,
-      transformType, outputFolderId, outputVolumeName, outputTransformName) = \
-      (argMap['fixed_volume_file'][0], argMap['moving_volume_file'][0],
-       argMap['fixed_item_id'][0], argMap['moving_item_id'][0], 
-      json.loads(argMap['fixed_fiducials'][0]), json.loads(argMap['moving_fiducials'][0]),
-      argMap['transform_type'][0],  argMap['output_folder_id'][0],
-      argMap['output_volume_name'][0], argMap['output_transform_name'][0]) 
+
+    fixedVolumeFile = argMap['fixed_volume_file'][0]
+    movingVolumeFile = argMap['moving_volume_file'][0]
+    fixedItemId = argMap['fixed_volume_file'][0]
+    movingItemId = argMap['moving_volume_file'][0]
+    fixedFiducialsList = json.loads(argMap['fixed_fiducials'][0])
+    movingFiducialsList = json.loads(argMap['moving_fiducials'][0])
+    transformType = argMap['transform_type'][0]
+    outputFolderId = argMap['output_folder_id'][0]
+    outputVolumeName = argMap['output_volume_name'][0]
+    outputTransformName = argMap['output_transform_name'][0]
 
     print fixed_item_id, moving_item_id
     rp = SlicerReg(self, jobId, pipelineName, pydasParams, tmpDirRoot, dataDir,

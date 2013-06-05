@@ -2,12 +2,13 @@ import re
 import logging
 import os
 import sys
-import pydas
 import shutil
 import json
 
+import pydas
+
 class PipelineStatusEvent():
-    """This class implements pipeline status events and is called by pyslicer's own process manager."""
+    """This class implements pipeline status events."""
     statuseventpattern = 'status&remoteprocessing_job_id=%s&event_id=%s&timestamp=%s&event_type=%s'
     statuseventmessagepattern = statuseventpattern + '&message=%s'
 
@@ -21,13 +22,16 @@ class PipelineStatusEvent():
 
     def __repr__(self):
         if self.message is not None:
-            string  = self.statuseventmessagepattern % (self.jobId, self.eventId, self.timestamp, self.eventType, self.message)
+            string = self.statuseventmessagepattern % (self.jobId, self.eventId,
+                self.timestamp, self.eventType, self.message)
         else:
-            string  = self.statuseventpattern % (self.jobId, self.eventId, self.timestamp, self.eventType)
+            string = self.statuseventpattern % (self.jobId, self.eventId,
+                self.timestamp, self.eventType)
         return string
 
     @staticmethod
     def parseEvent(data):
+        """Create a status event if the input data matches status event pattern"""
         anychargroup = '(.*)'
         # first search for pattern with message as it is a superset of messageless pattern
         pattern = PipelineStatusEvent.statuseventmessagepattern
@@ -36,8 +40,7 @@ class PipelineStatusEvent():
         m = re.search(regex, data)
         message = None
         if m is not None:
-            match = True 
-            #print "Match:", m.groups()
+            match = True
             (jobId, eventId, timestamp, eventType, message) = m.groups()
             return PipelineStatusEvent(jobId, eventId, timestamp, eventType, message)
         else:
@@ -45,15 +48,17 @@ class PipelineStatusEvent():
             regex = pattern % tuple([anychargroup] * pattern.count('%s'))
             m = re.search(regex, data)
             if m is not None:
-                match = True 
-                #print "Match:", m.groups()
+                match = True
                 (jobId, eventId, timestamp, eventType) = m.groups()
                 return PipelineStatusEvent(jobId, eventId, timestamp, eventType)
         return None
 
+
 class PipelineFactory():
-    """This class implements an interface to get pipeline and the python script running within Slicer."""
+    """This class implements an interface to get pipeline and the python script
+    running within Slicer."""
     def getPipeline(self, pipelineName, jobId, pydasParams, tmpDirRoot, args):
+        """Return a specific pipeline based on input parameters"""
         if pipelineName == 'segmentation':
             return SegPipeline(pipelineName, jobId, pydasParams, tmpDirRoot, args)
         elif pipelineName == 'registration':
@@ -62,12 +67,15 @@ class PipelineFactory():
             return None
 
     def getSlicerScript(self, pipelineName):
+        """Return the name of a python script running within Slicer's python 
+        environment."""
         if pipelineName == 'segmentation':
             return 'seg_slicerjob.py'
         elif pipelineName == 'registration':
             return 'reg_slicerjob.py'
         else:
             return None
+
 
 class Pipeline():
     """This class implements the base class for Pyslicer's pipelines."""
@@ -88,11 +96,12 @@ class Pipeline():
         self.pydasParams = pydasParams
         self.tmpDirRoot = tmpDirRoot
         self.eventIdCounter = 0
-        #TODO something better with logging
+        # TODO something better with logging
         logging.basicConfig(level=logging.WARNING)
         self.log = logging.getLogger('example')
 
     def create_event(self, eventType, message=None):
+        """Create a pipeline status event"""
         eventId = self.eventIdCounter
         self.eventIdCounter = self.eventIdCounter + 1
         timestamp = 0
@@ -103,12 +112,16 @@ class Pipeline():
         return self.create_event(self.event_process, message)
 
     def define_events(self):
+        """Define all the status events for this pipeline"""
         self.eventsMap = {}
-        events = [self.create_event(eventType) for eventType in [self.event_pipelinestart, self.event_downloadinput]]
+        events = [self.create_event(eventType)
+            for eventType in [self.event_pipelinestart, self.event_downloadinput]]
         events = events + self.define_process_events()
-        events = events + [self.create_event(eventType) for eventType in [self.event_uploadoutput, self.event_pipelineend]]
+        events = events + [self.create_event(eventType)
+            for eventType in [self.event_uploadoutput, self.event_pipelineend]]
         for event in events:
             self.eventsMap[event.eventId] = event
+        # Keep original comments as below
         # then when it is their time to nofify, call notify passing in jobstatu_id and timestamp
         # need an imple method for subclasses to list their process events
         # maybe a map of event types to event, then a submap for process events?
@@ -116,7 +129,8 @@ class Pipeline():
         # and maybe there is no reason to print them in the tracker anymore 
 
     def register_events(self):
-        # get all the events, register them with the midas server
+        """"Get all the status events of this pipeline, register them with the
+        Midas server"""
         self.define_events()
         events = self.eventsMap.values()
         method = 'midas.pyslicer.add.jobstatuses'
@@ -131,9 +145,9 @@ class Pipeline():
         for (eventId, jobstatusId) in eventId_to_jobstatusId.items():
             event = self.eventsMap[eventId]
             event.jobstatusId = jobstatusId
-   
+
     def get_events(self):
-        # get all the events for a given job
+        """Get all the registered status events for a given pipeline job"""
         self.define_events()
         method = 'midas.pyslicer.get.job.status'
         parameters = {}
@@ -149,57 +163,66 @@ class Pipeline():
             event.jobstatusId = jobstatus['jobstatus_id']
 
     def define_process_events(self):
-        # should be overwritten in the subclass
+        """Define the process events for a pipeline. It should be overwritten
+        in the subclass"""
         return []
 
     def createTmpDir(self):
+        """Create a temporary directory for a pipeline job"""
         self.tmpdirpath = ('%s_%s_tmpdir') % (self.jobId, self.pipelineName)
         # clear it out if it already exists
         if(os.path.exists(self.tmpdirpath)):
             self.removeTmpDir()
         os.mkdir(self.tmpdirpath)  
-        # create a data dir
+        # create a directory for input data
         self.dataDir = os.path.join(self.tmpdirpath, 'data')
         os.mkdir(self.dataDir)  
-        # create an out dir
+        # create a directory for output results
         self.outDir = os.path.join(self.tmpdirpath, 'out')
         os.mkdir(self.outDir)  
-    
+
     def downloadInput(self):
+        """Report download input event and then call the actual download function"""
         self.reportStatus(self.event_downloadinput)
         self.downloadInputImpl()        
- 
+
     def downloadInputImpl(self):
+        """Download one input file. It should be overwritten by subclasses if 
+        they need more input data"""
         self.tempfiles = {}
         self.tempfiles['inputfile'] = self.downloadItem(self.itemId)
         print self.tempfiles
 
     def downloadItem(self, itemId):
+        """Download a single item from the Midas server using pydas"""
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
         pydas.api._download_item(itemId, self.dataDir)
-        # unzip any zipped files
+        # Unzip any zipped files
         for filename in os.listdir(self.dataDir):
             if filename.endswith('.zip'):
                 filepath = os.path.join(self.dataDir, filename)
                 zip = zipfile.ZipFile(filepath)
                 zip.extractall(self.dataDir)
                 zip.close()
-        # return the path to the name of the item
+        # Return the path to the name of the item
         item = pydas.session.communicator.item_get(pydas.session.token, itemId)
         return item['name']
-    
+
     def executeDownload(self):
+        """Register a pipeline's events, start the pipeline as a Midas job, 
+        create the temporary directory for this job, and then download 
+        the input file(s)"""
         try:
             self.register_events()
-            # send pydas pipeline started
+            # Send pydas pipeline started event
             self.reportMidasStatus(self.midasstatus_started)
             self.reportStatus(self.event_pipelinestart)
             self.createTmpDir()
             self.downloadInput()
             print self.tempfiles
             return (self.dataDir, self.outDir, self.tempfiles)
-        except Exception as exception:
+        except StandardError as exception:
             # TODO where to do exceptions status and conditions
             self.log.exception(exception)
             print self.event_exception
@@ -208,36 +231,43 @@ class Pipeline():
             emsg = repr(traceback.format_exception(etype, value, tb))
             self.reportMidasStatus(self.midasstatus_exception, emsg)
             exit(1)
-    
+
     def setTmpDir(self):
+        """Set temporary directory"""
         self.tmpdirpath = ('%s_%s_tmpdir') % (self.jobId, self.pipelineName)
         self.dataDir = os.path.join(self.tmpdirpath, 'data')
         self.outDir = os.path.join(self.tmpdirpath, 'out')
         
     def uploadItem(self, itemName, outputFolderId, srcDir=None, outFile=None, itemDescription=None):
-        # read everything in the srcDir and upload it as a single item
-        # create a new item
-        # need a folder id
+        """Read everything in the srcDir and upload it as a single item. If 
+        outFile is set, only upload that file"""
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
+        # Create a new item (fold_id is required)
         if itemDescription is not None:
-            item = pydas.session.communicator.create_item(pydas.session.token, itemName, outputFolderId, description=itemDescription)
+            item = pydas.session.communicator.create_item(pydas.session.token,
+                itemName, outputFolderId, description=itemDescription)
         else:
-            item = pydas.session.communicator.create_item(pydas.session.token, itemName, outputFolderId)
+            item = pydas.session.communicator.create_item(pydas.session.token,
+                itemName, outputFolderId)
         itemId = item['item_id']
         if srcDir is None:
             srcDir = self.outDir
         if outFile is not None:
-            # only upload this one file
-            uploadToken = pydas.session.communicator.generate_upload_token(pydas.session.token, itemId, outFile)
+            # Only upload this one file
+            uploadToken = pydas.session.communicator.generate_upload_token(
+                pydas.session.token, itemId, outFile)
             filepath = os.path.join(srcDir, outFile)
-            pydas.session.communicator.perform_upload(uploadToken, outFile, itemid=itemId, filepath=filepath)
+            pydas.session.communicator.perform_upload(uploadToken, outFile,
+                itemid=itemId, filepath=filepath)
         else:
             for filename in os.listdir(srcDir):
-                uploadToken = pydas.session.communicator.generate_upload_token(pydas.session.token, itemId, filename)
+                uploadToken = pydas.session.communicator.generate_upload_token(
+                    pydas.session.token, itemId, filename)
                 filepath = os.path.join(srcDir, filename)
-                pydas.session.communicator.perform_upload(uploadToken, filename, itemid=itemId, filepath=filepath)
-        # set the output item as an output for the job
+                pydas.session.communicator.perform_upload(uploadToken, filename,
+                    itemid=itemId, filepath=filepath)
+        # Set the output item as an output for the job
         method = 'midas.pyslicer.add.job.output.item'
         parameters = {}
         parameters['token'] = pydas.session.token
@@ -246,24 +276,30 @@ class Pipeline():
         print parameters
         pydas.session.communicator.request(method, parameters) 
         return itemId
-    
+
     def uploadOutput(self):
+        """Report upload output event and then call the actual upload function"""
         self.reportStatus(self.event_uploadoutput)
         self.uploadOutputImpl()        
- 
+
     def uploadOutputImpl(self):
+        """Upload output file(s) of the pipeline job. It should be overwritten
+        by subclasses"""
         pass
 
     def executeUpload(self):
+        """Get registered events for this pipeline, get the temporary directory
+        for this job, upload the output file(s), delete the temporary directory,
+        and then end the pipeline"""
         try:
             self.get_events()
             self.setTmpDir()
             self.uploadOutput()
             self.removeTmpDir()
             self.reportStatus(self.event_pipelineend)
-            # send pydas pipeline finished
+            # Send pydas pipeline finished event
             self.reportMidasStatus(self.midasstatus_done)
-        except Exception as exception:
+        except StandardError as exception:
             # TODO where to do exceptions status and conditions
             self.log.exception(exception)
             print self.event_exception
@@ -272,15 +308,17 @@ class Pipeline():
             emsg = repr(traceback.format_exception(etype, value, tb))
             self.reportMidasStatus(self.midasstatus_exception, emsg)
             exit(1)
- 
+
     def removeTmpDir(self):
+        """delete the temporary directory and its sub-directories and files"""
         shutil.rmtree(self.tmpdirpath)
 
     def reportProcessStatus(self, message=None):
         self.reportStatus(self.event_process, message)
 
     def reportStatus(self, eventType, message=None):
-        # find the event
+        """Report event status to the Midas server"""
+        # Find the event
         match = None
         for event in self.eventsMap.values():
             if event.eventType == eventType and event.message == message:
@@ -298,8 +336,10 @@ class Pipeline():
         parameters['jobstatus_id'] = match.jobstatusId
         parameters['notify_date'] = timestamp
         pydas.session.communicator.request(method, parameters) 
-    
+
     def reportMidasStatus(self, status, condition=None):
+        """Report the pipeline job status (started, done, exception) to the 
+        Midas server"""
         # TODO add these methods to pydas
         # TODO add condition to api call 
         (email, apiKey, url) = self.pydasParams
@@ -331,31 +371,40 @@ class SegPipeline(Pipeline):
         if 'outputitemname' in jsonArgs:
             self.outputItemName = jsonArgs['outputitemname'][0]
             self.outputFolderId = jsonArgs['outputfolderid'][0]
-   #
+
     def define_process_events(self):
-        process_events = [self.loaded_input_volume, self.started_segmentation, self.finished_segmentation, self.started_modelmaker, self.finished_modelmaker, self.wrote_model_output]
+        """Define the process events for simple region growing segmentation."""
+        process_events = [self.loaded_input_volume, self.started_segmentation,
+            self.finished_segmentation, self.started_modelmaker,
+            self.finished_modelmaker, self.wrote_model_output]
         process_events = [self.create_process_event(eventType) for eventType in process_events]
         print process_events
         return process_events
 
     def uploadOutputImpl(self):
-        #print "segmodeluploadoutputimpl"
+        """Upload output item (surface model) to the Midas server."""
         self.outFile = self.outputItemName + '.vtp'
         itemId = self.uploadItem(self.outFile, self.outputFolderId)
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
         # TODO move metadata to superclass
-        # set metadata on the output item
+        # Set metadata on the output item
         method = 'midas.item.setmultiplemetadata'
         parameters = {}
         parameters['token'] = pydas.session.token
         parameters['itemid'] = itemId
         parameters['count'] = 2
+        # Use red to display the input seed and the contour of the output 
+        # surface model in ParaView
         parameters['element_1'] = 'ParaView'
-        parameters['element_2'] = 'ParaView'
         parameters['qualifier_1'] = 'DiffuseColor'
-        parameters['qualifier_2'] = 'Orientation'
         parameters['value_1'] = '[1.0,0.0,0.0]'
+        # In ParaView, use [180, 180, 0] orientation to display the surface model 
+        # which is generated by Slicer's model maker
+        # TODO: make sure this hard-coded orientation on the ModelMaker output
+        # is always correct
+        parameters['element_2'] = 'ParaView'
+        parameters['qualifier_2'] = 'Orientation'
         parameters['value_2'] = '[180.0,180.0,0.0]'
         print parameters
         pydas.session.communicator.request(method, parameters)
@@ -383,20 +432,21 @@ class RegPipeline(Pipeline):
             self.outputTransformName = jsonArgs['output_transform_name'][0]
 
     def define_process_events(self):
+        """Define the process events for simple region growing registration."""
         process_events = [self.loaded_input_volumes, self.finished_registration, self.wrote_transformed_volume, self.wrote_transform]
         process_events = [self.create_process_event(eventType) for eventType in process_events]
         print process_events
         return process_events
-    
+
     def downloadInputImpl(self):
-        print "regmodeldownloadinputimpl"
+        """Download input items."""
         self.tempfiles = {}
         self.tempfiles['fixed_volume_file'] = self.downloadItem(self.fixedItemId)
         self.tempfiles['moving_volume_file'] = self.downloadItem(self.movingItemId)
         print self.tempfiles
 
     def uploadOutputImpl(self):
-        #print "regmodeluploadoutputimpl"
+        """Upload output items to the Midas server."""
         (email, apiKey, url) = self.pydasParams
         pydas.login(email=email, api_key=apiKey, url=url)
         folder = pydas.session.communicator.create_folder(pydas.session.token, 'output_'+self.jobId, self.outputFolderId)
