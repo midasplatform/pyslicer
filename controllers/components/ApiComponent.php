@@ -222,6 +222,7 @@ class Pyslicer_ApiComponent extends AppComponent
    * Start TubeTK PDF segmenation on an item using the initial labelmap
    * @param item_id The id of the item to be segmented
    * @param labelmap_item_id The id of input label map item
+   * @param object_id Array of object label values
    * @param output_item_name The name of the created output surface model
    * @param output_labelmap The name of the created output label map
    * @param output_folder_id (optional) The id of the folder where the output
@@ -248,6 +249,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $labelmapItemId = $args['labelmap_item_id'];
     $outputItemName = $args['output_item_name'];
     $outputLabelmap = $args['output_labelmap'];
+    $objectId = JsonComponent::decode($args['object_id']);
 
     // Check the input item
     $itemDao = $itemModel->load($itemId);
@@ -300,6 +302,7 @@ class Pyslicer_ApiComponent extends AppComponent
     $job->setStatus(MIDAS_REMOTEPROCESSING_STATUS_WAIT);
     $segmentationPipeline = 'pdfsegmentation';
     $job->setScript($segmentationPipeline);
+    $job->setParams('objectId: ' . JsonComponent::encode($objectId));
     $jobModel->save($job);
     $jobModel->addItemRelation($job, $itemDao, MIDAS_PYSLICER_RELATION_TYPE_INPUT_ITEM);
     $jobModel->addItemRelation($job, $labelmapItemDao, MIDAS_PYSLICER_RELATION_TYPE_INPUT_LABELMAP);
@@ -328,6 +331,7 @@ class Pyslicer_ApiComponent extends AppComponent
                              'apikey' => $apiKey,
                              'inputitemid' => $itemId,
                              'inputlabelmapid' => $labelmapItemId,
+                             'objectid' => $objectId[0] . ',' . $objectId[1],
                              'outputfolderid' => $parentFolderId,
                              'outputitemname' => $outputItemName,
                              'outputlabelmap' => $outputLabelmap,

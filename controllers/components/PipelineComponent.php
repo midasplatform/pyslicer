@@ -159,10 +159,10 @@ class Pyslicer_PipelineComponent extends AppComponent
     $labelmapSliceView = $midasPath . '/pvw/paraview/slice?itemId=' .
       $inputItemId . '&labelmaps=' . $outputLabelmapItemId;
 
-    return array( array ('text' => 'surface model mesh view', 'url' => $meshView),
-                  array ('text' => 'surface model contour slice view', 'url' => $sliceView),
-                  array ('text' => 'surface model volume view', 'url' => $volumeView),
-                  array ('text' => 'label map slice view', 'url' => $labelmapSliceView));
+    return array( array ('text' => 'mesh view', 'url' => $meshView),
+                  array ('text' => 'slice view (with surface model contour)', 'url' => $sliceView),
+                  array ('text' => 'volume view', 'url' => $volumeView),
+                  array ('text' => 'slice view (with output label map)', 'url' => $labelmapSliceView));
     }
 
   public function resolveInputsAndOutputs($job)

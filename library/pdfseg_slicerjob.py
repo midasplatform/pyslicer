@@ -18,12 +18,13 @@ class SlicerPdfSeg(SlicerJob):
     wrote_model_output = "Wrote Model Output"
 
     def __init__(self, jobId, pipelineName, pydasParams, tmpDirRoot, dataDir, 
-                 outDir, proxyurl, inputFile, inputLabelMap, outputItemName, 
-                 outputLabelMap, outputFolderId):
+                 outDir, proxyurl, inputFile, inputLabelMap, objectId,
+                 outputItemName, outputLabelMap, outputFolderId):
         SlicerJob.__init__(self, jobId, pipelineName, pydasParams, tmpDirRoot,
                            dataDir, outDir, proxyurl)
         self.inputFile = inputFile
         self.inputLabelMap = inputLabelMap
+        self.objectId = map(int, objectId.split(','))
         self.outputItemName = outputItemName
         self.outputLabelMap = outputLabelMap
         self.outputFolderId = outputFolderId
@@ -52,7 +53,12 @@ class SlicerPdfSeg(SlicerJob):
         slicer.mrmlScene.AddNode(outVolume)
         # use 0 as voidId
         voidId = 0
-        params = {'inputVolume1': inputVolume.GetID(), 'labelmap': labelMapVolume.GetID(), 'outputVolume': outVolume.GetID(), 'voidId': voidId}
+        params = {'inputVolume1': inputVolume.GetID(),
+                  'labelmap': labelMapVolume.GetID(),
+                  'outputVolume': outVolume.GetID(),
+                  'voidId': voidId,
+                  'reclassifyObjectMask': False,
+                  'reclassifyNotObjectMask': False}
         # Get obejctId from the intial label map
         accum = vtk.vtkImageAccumulate()
         accum.SetInput(labelMapVolume.GetImageData())
@@ -60,15 +66,18 @@ class SlicerPdfSeg(SlicerJob):
         data = accum.GetOutput()
         data.Update()
         numBins = accum.GetComponentExtent()[1]
-        labels = []
-        for i in range(0, numBins + 1):
-            numVoxels = data.GetScalarComponentAsDouble(i, 0, 0, 0)
-            if (numVoxels != 0):
-                labels.append(i)
-        if voidId in labels:
-            labels.remove(voidId)
-        params["objectId"] = labels
-        print labels
+        if self.objectId:
+            params["objectId"] = self.objectId
+        else:
+            labels = []
+            for i in range(0, numBins + 1):
+                numVoxels = data.GetScalarComponentAsDouble(i, 0, 0, 0)
+                if (numVoxels != 0):
+                    labels.append(i)
+            if voidId in labels:
+                labels.remove(voidId)
+            params["objectId"] = labels
+            print labels
 
         self.report_status(self.event_process, self.started_segmentation)
         # Run PDF segmentation in Slicer
@@ -80,11 +89,20 @@ class SlicerPdfSeg(SlicerJob):
         slicer.util.saveNode(outVolume, outLabelMapPath, save_node_params)
         self.report_status(self.event_process, self.wrote_segmentation_output)
 
-        # Call model maker to create a surface model for the output labelmap
+        # Call model maker to create a surface model for foreground label only
         modelmaker = slicer.modules.modelmaker
         mhn = slicer.vtkMRMLModelHierarchyNode()
         slicer.mrmlScene.AddNode(mhn)
-        parameters = {'InputVolume': outVolume.GetID(), 'ModelSceneFile': mhn.GetID()}
+        parameters = {'InputVolume': outVolume.GetID(),
+                      'ModelSceneFile': mhn.GetID(),
+                      'FilterType': "Sinc",
+                      'GenerateAll': False,
+                      'StartLabel':  params["objectId"][0], # foreground label
+                      'EndLabel':  params["objectId"][0], # foreground label
+                      'SplitNormals': True,
+                      'PointNormals': True,
+                      'SkipUnNamed':  True
+                      }
         self.report_status(self.event_process, self.started_modelmaker)
         cliModelNode = slicer.cli.run(modelmaker, None, parameters, wait_for_completion=True)
         self.report_status(self.event_process, self.finished_modelmaker)
@@ -141,8 +159,9 @@ if __name__ == '__main__':
     outputItemName = arg_map['outputitemname'][0]
     outputLabelMap = arg_map['outputlabelmap'][0]
     outputFolderId = arg_map['outputfolderid'][0]
+    objectId = arg_map['objectid'][0]
 
     sp = SlicerPdfSeg(jobId, pipelineName, pydasParams, tmpDirRoot, dataDir, 
-                      outDir, proxyurl, inputFile, inputLabelMap, 
+                      outDir, proxyurl, inputFile, inputLabelMap, objectId,
                       outputItemName, outputLabelMap, outputFolderId)
     sp.execute()

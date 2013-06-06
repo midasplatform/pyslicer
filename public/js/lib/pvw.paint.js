@@ -5,13 +5,13 @@ midas.pvw = midas.pvw || {};
  * Activate paint mode as soon as we finished initialization
  */
 midas.pvw.postInitCallback = function () {
-    $('button.paintButton').click();
+    midas.pvw.paintMode();
 };
 
 /**
  * Callback handler to trigger pdf segmentation pipeline
  */
-midas.pvw.handlePDFSegmentation = function (labelmapItemId) {
+midas.pvw.handlePDFSegmentation = function (labelmapItemId, objectLabels) {
     $('div.MainDialog').dialog('close');
     // Get output item name
     var html = '<div><input style="width: 400px;" type="text" id="processItemSlicerOutputName" value="'
@@ -31,15 +31,16 @@ midas.pvw.handlePDFSegmentation = function (labelmapItemId) {
         var outputLabelmap = $('#processItemSlicerOutputName').val() + '-label';
 
         $('#processingPleaseWait').show();
+        var objectId = '['+objectLabels[0]+', '+objectLabels[1]+']'; // serialize objectId value
         ajaxWebApi.ajax({
             method: 'midas.pyslicer.start.pdfsegmentation',
-            args: 'item_id=' + json.pvw.item.item_id + '&labelmap_item_id=' + labelmapItemId + '&output_item_name=' + outputItemName + '&output_labelmap=' + outputLabelmap,
+            args: 'item_id=' + json.pvw.item.item_id + '&labelmap_item_id=' + labelmapItemId + '&object_id=' + objectId + '&output_item_name=' + outputItemName + '&output_labelmap=' + outputLabelmap,
             success: function (results) {
                 $('div.MainDialog').dialog('close');
                 $('#processingPleaseWait').hide();
                 if (results.data.redirect) {
                     // Open job status url in another window so that users can continue paiting
-                    window.open(results.data.redirect);
+                    window.open(results.data.redirect, '_blank', 'resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=yes,directories=no,status=yes');
                 }
             },
             error: function (XMLHttpRequest, textStatus, errorThrown) {

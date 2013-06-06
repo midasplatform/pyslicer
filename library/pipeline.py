@@ -225,7 +225,6 @@ class Pipeline():
             self.reportStatus(self.event_pipelinestart)
             self.createTmpDir()
             self.downloadInput()
-            print self.tempfiles
             return (self.dataDir, self.outDir, self.tempfiles)
         except StandardError as exception:
             # TODO where to do exceptions status and conditions
@@ -499,7 +498,10 @@ class PdfSegPipeline(Pipeline):
         """Download input item and initial label map from the Midas server."""
         self.tempfiles = {}
         self.tempfiles['inputfile'] = self.downloadItem(self.itemId)
-        self.tempfiles['inputlabelmap'] = self.downloadItem(self.labelMapItemId)
+        # In case user saves initial label map with the same name multiple times
+        itemName = self.downloadItem(self.labelMapItemId)
+        bitstreamName = os.path.splitext(itemName)[0] + '.mha'
+        self.tempfiles['inputlabelmap'] = bitstreamName
         print self.tempfiles
 
     def uploadOutputImpl(self):
