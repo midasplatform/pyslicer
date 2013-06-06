@@ -43,7 +43,7 @@ $(document).ready(function(){
 
         midas.pyslicer.statuslist.itemSelectionCallback = function(name, id) {
             var redirectUrl = $('.webroot').val() + '/pvw/paraview/slice?itemId=' + id;
-            redirectUrl += '&operations=paint&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/pvw.paint.js';
+            redirectUrl += '&operations=paint&jsImports=' + $('.webroot').val() + '/modules/pyslicer/public/js/lib/pvw.paint.js;' + $('.webroot').val() + '/modules/pyslicer/public/js/simplecolorpicker.js';
             window.location = redirectUrl;
         };
     });
