@@ -84,9 +84,27 @@ class SlicerPdfSeg(SlicerJob):
         cliNode = slicer.cli.run(slicer.modules.segmentconnectedcomponentsusingparzenpdfs, None, params, wait_for_completion=True)
         self.report_status(self.event_process, self.finished_segmentation)
 
-        # Export output label map to local disk
+        # Split foreground object label from output label map
+        foregroundObjectVolume = outVolume
+        if self.objectId:
+            thresholder = vtk.vtkImageThreshold()
+            thresholder.SetNumberOfThreads(1)
+            thresholder.SetInput(outVolume.GetImageData())
+            thresholder.SetInValue(self.objectId[0]) # foreground label
+            thresholder.SetOutValue(0)
+            thresholder.ReplaceInOn()
+            thresholder.ReplaceOutOn()
+            thresholder.ThresholdBetween(self.objectId[0], self.objectId[0])
+            thresholder.SetOutputScalarType(outVolume.GetImageData().GetScalarType())
+            thresholder.Update()
+            if thresholder.GetOutput().GetScalarRange() != (0.0, 0.0):
+               volumesLogic = slicer.modules.volumes.logic()
+               foregroundObjectVolume = volumesLogic.CreateAndAddLabelVolume(outVolume, 'foregroundLabel')
+               foregroundObjectVolume.GetImageData().DeepCopy(thresholder.GetOutput())
+
+        # Export foreground object label to local disk
         save_node_params = {'fileType': 'mha'}
-        slicer.util.saveNode(outVolume, outLabelMapPath, save_node_params)
+        slicer.util.saveNode(foregroundObjectVolume, outLabelMapPath, save_node_params)
         self.report_status(self.event_process, self.wrote_segmentation_output)
 
         # Call model maker to create a surface model for foreground label only
