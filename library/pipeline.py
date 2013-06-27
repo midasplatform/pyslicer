@@ -483,6 +483,10 @@ class PdfSegPipeline(Pipeline):
             self.outputItemName = json_args['outputitemname'][0]
             self.outputLabelMap = json_args['outputlabelmap'][0]
             self.outputFolderId = json_args['outputfolderid'][0]
+        if 'presetitemid' in json_args:
+            self.presetItemId = json_args['presetitemid'][0]
+        else:
+            self.presetItemId = None
 
     def define_process_events(self):
         """Define the process events for TubeTK PDF segmentation."""
@@ -502,6 +506,8 @@ class PdfSegPipeline(Pipeline):
         itemName = self.downloadItem(self.labelMapItemId)
         bitstreamName = os.path.splitext(itemName)[0] + '.mha'
         self.tempfiles['inputlabelmap'] = bitstreamName
+        if not self.presetItemId is None:
+            self.tempfiles['presetfile'] = self.downloadItem(self.presetItemId)
         print self.tempfiles
 
     def uploadOutputImpl(self):

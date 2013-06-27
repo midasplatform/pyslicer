@@ -271,6 +271,19 @@ class Pyslicer_ApiComponent extends AppComponent
       {
       throw new Zend_Exception('Read access on the input labelmap item required.', MIDAS_PYSLICER_INVALID_POLICY);
       }
+    // Check the PDF preset json item
+    if (array_key_exists('preset_item_id', $args)) {
+      $presetItemId = $args['preset_item_id'];
+      $presetItemDao = $itemModel->load($presetItemId);
+      if($presetItemDao === false)
+        {
+        throw new Zend_Exception('This preset json item does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+        }
+      if(!$itemModel->policyCheck($presetItemDao, $userDao, MIDAS_POLICY_READ))
+        {
+        throw new Zend_Exception('Read access on the preset json item required.', MIDAS_PYSLICER_INVALID_POLICY);
+        }
+      }
 
     // Check the output folder
     if(isset($args['output_folder_id']))
@@ -336,6 +349,10 @@ class Pyslicer_ApiComponent extends AppComponent
                              'outputitemname' => $outputItemName,
                              'outputlabelmap' => $outputLabelmap,
                              'job_id' => $job->getKey());
+    if(isset($presetItemId))
+      {
+      $slicerjobParams['presetitemid'] = $presetItemId;
+      }
     $requestParams = "";
     $ind = 0;
     foreach ($slicerjobParams as $name => $value)
@@ -360,6 +377,100 @@ class Pyslicer_ApiComponent extends AppComponent
       $redirectURL = $midasUrl . '/pyslicer/process/status?jobId='.$job->getJobId();
       return array('redirect' => $redirectURL);
       }
+    }
+
+  /**
+   * Create folder for TubeTK PDF segmenation based on the root folder
+   * @param root_folder_id The id of the root folder.
+   * @return array('dataFolderId' => dataFolderId, 'presetsFolderId' => presetsFolderId,
+   * 'outputFolderId' => outputFolderId)
+   */
+  public function createPdfsegmentationFolders($args)
+    {
+    $this->_checkKeys(array('root_folder_id'), $args);
+    $userDao = $this->_getUser($args);
+    if(!$userDao)
+      {
+      throw new Exception('Anonymous users may not create folders.', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+    $folderModel = MidasLoader::loadModel('Folder');
+    $rootFolderId = $args['root_folder_id'];
+
+    // Check the input root folder
+    $rootFolderDao = $folderModel->load($rootFolderId);
+    if($rootFolderDao === false)
+      {
+      throw new Zend_Exception('This folder does not exist.', MIDAS_PYSLICER_INVALID_PARAMETER);
+      }
+    if(!$folderModel->policyCheck($rootFolderDao, $userDao, MIDAS_POLICY_WRITE))
+      {
+      throw new Zend_Exception('Write access on this folder required.', MIDAS_PYSLICER_INVALID_POLICY);
+      }
+
+    $dataFolderId = $this->_createChildFolder($userDao, $rootFolderId, 'data', 'input data directory for PDF segmenter');
+    $presetFolderId = $this->_createChildFolder($userDao, $rootFolderId, 'preset', 'parameter preset directory for PDF segmenter');
+    $outputFolderId = $this->_createChildFolder($userDao, $rootFolderId, 'output', 'output results directory for PDF segmenter');
+    return array('dataFolderId' => $dataFolderId,
+                 'presetFolderId' => $presetFolderId,
+                 'outputFolderId' => $outputFolderId);
+    }
+
+  /**
+    * Create a child folder or use the existing one if it has the same name.
+    * @param type $userDao
+    * @param type $parentId parent folder Id
+    * @param type $name name of the child folder to be created
+    * @param type $description description of the child folder to be created
+    * @return id of newly created folder or the exsisting folder with the same name
+    * @throws Exception
+    */
+  protected function _createChildFolder($userDao, $parentId, $name, $description='')
+    {
+    if($userDao == false)
+      {
+      throw new Exception('Cannot create folder anonymously', MIDAS_INVALID_POLICY);
+      }
+    $folderModel = MidasLoader::loadModel('Folder');
+    $record = false;
+    $uuid = '';
+    if($parentId == -1) //top level user folder being created
+      {
+      $new_folder = $folderModel->createFolder($name, $description, $userDao->getFolderId(), $uuid);
+      }
+    else //child of existing folder
+      {
+      $folder = $folderModel->load($parentId);
+      if(($existing = $folderModel->getFolderExists($name, $folder)))
+        {
+        $returnArray = $existing->toArray();
+        return $returnArray['folder_id'];
+        }
+      $new_folder = $folderModel->createFolder($name, $description, $folder, $uuid);
+      if($new_folder === false)
+        {
+        throw new Exception('Create folder failed', MIDAS_INTERNAL_ERROR);
+        }
+      $policyGroup = $folder->getFolderpolicygroup();
+      $policyUser = $folder->getFolderpolicyuser();
+      $folderpolicygroupModel = MidasLoader::loadModel('Folderpolicygroup');
+      $folderpolicyuserModel = MidasLoader::loadModel('Folderpolicyuser');
+      foreach($policyGroup as $policy)
+        {
+        $folderpolicygroupModel->createPolicy($policy->getGroup(), $new_folder, $policy->getPolicy());
+        }
+      foreach($policyUser as $policy)
+        {
+        $folderpolicyuserModel->createPolicy($policy->getUser(), $new_folder, $policy->getPolicy());
+        }
+      if(!$folderModel->policyCheck($new_folder, $userDao, MIDAS_POLICY_ADMIN))
+        {
+        $folderpolicyuserModel->createPolicy($userDao, $new_folder, MIDAS_POLICY_ADMIN);
+        }
+      }
+    // reload folder to get up to date privacy status
+    $new_folder = $folderModel->load($new_folder->getFolderId());
+    $returnArray = $new_folder->toArray();
+    return $returnArray['folder_id'];
     }
 
 

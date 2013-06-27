@@ -19,7 +19,7 @@ class SlicerPdfSeg(SlicerJob):
 
     def __init__(self, jobId, pipelineName, pydasParams, tmpDirRoot, dataDir, 
                  outDir, proxyurl, inputFile, inputLabelMap, objectId,
-                 outputItemName, outputLabelMap, outputFolderId):
+                 outputItemName, outputLabelMap, outputFolderId, presetFile):
         SlicerJob.__init__(self, jobId, pipelineName, pydasParams, tmpDirRoot,
                            dataDir, outDir, proxyurl)
         self.inputFile = inputFile
@@ -28,6 +28,7 @@ class SlicerPdfSeg(SlicerJob):
         self.outputItemName = outputItemName
         self.outputLabelMap = outputLabelMap
         self.outputFolderId = outputFolderId
+        self.presetFile =  presetFile
 
     def process(self):
         """Execute TubeTK PDF segmentation """
@@ -56,10 +57,18 @@ class SlicerPdfSeg(SlicerJob):
         params = {'inputVolume1': inputVolume.GetID(),
                   'labelmap': labelMapVolume.GetID(),
                   'outputVolume': outVolume.GetID(),
-                  'voidId': voidId,
-                  'reclassifyObjectMask': False,
-                  'reclassifyNotObjectMask': False}
-        # Get obejctId from the intial label map
+                  'voidId': voidId}
+        if not self.presetFile is None:
+            presetPath = os.path.join(self.dataDir, self.presetFile)
+            with open(presetPath) as preset_file:
+                data = json.load(preset_file)
+                params['erodeRadius'] = data['pdf_segmenter_parameters']['erosion_radius']
+                params['holeFillIterations'] = data['pdf_segmenter_parameters']['hole_fill_iterations']
+                params['probSmoothingStdDev'] = data['pdf_segmenter_parameters']['probability_smoothing_standard_deviation']
+                params['reclassifyObjectMask'] = data['pdf_segmenter_parameters']['reclassify_foreground_mask']
+                params['reclassifyNotObjectMask'] = data['pdf_segmenter_parameters']['reclassify_barrier_mask']
+                params['forceClassification'] = data['pdf_segmenter_parameters']['force_classification']
+        # Get obejctId from the initial label map
         accum = vtk.vtkImageAccumulate()
         accum.SetInput(labelMapVolume.GetImageData())
         accum.UpdateWholeExtent()
@@ -178,8 +187,12 @@ if __name__ == '__main__':
     outputLabelMap = arg_map['outputlabelmap'][0]
     outputFolderId = arg_map['outputfolderid'][0]
     objectId = arg_map['objectid'][0]
+    if 'presetfile' in arg_map.keys():
+        presetFile = arg_map['presetfile'][0]
+    else:
+        presetFile = None
 
     sp = SlicerPdfSeg(jobId, pipelineName, pydasParams, tmpDirRoot, dataDir, 
                       outDir, proxyurl, inputFile, inputLabelMap, objectId,
-                      outputItemName, outputLabelMap, outputFolderId)
+                      outputItemName, outputLabelMap, outputFolderId, presetFile)
     sp.execute()
