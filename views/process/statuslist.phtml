@@ -28,7 +28,7 @@ $this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/proce
       <li><a href="javascript:;" id="segmentation" class="slicerPipeline" ><img alt="" src=""/>Simple Region Growing Segmentation</a></li>
       <li><a href="javascript:;" id="registration" class="slicerPipeline" ><img alt="" src=""/>Registration</a></li>
       <li><a href="javascript:;" id="pdfsegmentation" class="slicerPipeline" ><img alt="" src=""/>Interactive PDF Segmentation (TubeTK)</a>
-          <ul><a id="createPdfSegmenterFolders">Before run: Select a Root Folder for PDF Segmentation</a></ul>
+          <ul><a href="<?php echo $this->webroot?>/user/settings">Before first run: set default folders for PDF segmenter</a></ul>
       </li>
     </ul>  
   </div>

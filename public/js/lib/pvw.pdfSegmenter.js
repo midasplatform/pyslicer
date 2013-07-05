@@ -42,7 +42,6 @@ midas.pvw.pdfSegmenterPresets = function () {
     midas.pvw.pdfSegmenterOutputFolderId = typeof(json.pvw.pdfSegmenterOutputFolderId) === 'undefined' ? '' : json.pvw.pdfSegmenterOutputFolderId;
 
     var html = '<div class="sideElementActions viewAction">';
-    html += '<h1 id="updatePdfPresets"><a id="pdfSegmenterPresetsFolder">Change PDF Segmenter Presets Folder</a></h1>';
     html += '<h1>PDF Segmenter Presets</h1>';
     html += '<select id="selectedPresetFile">';
     html += '<option value = "">default</option>';
@@ -52,23 +51,6 @@ midas.pvw.pdfSegmenterPresets = function () {
     if (midas.pvw.pdfSegmenterPresetFolderId) {
         midas.pvw.getPdfSegmenterPresets(midas.pvw.pdfSegmenterPresetFolderId);
     }
-
-    $("h1#updatePdfPresets").hover(
-        function(){
-            $("h1#updatePdfPresets").css("background-color","#E5E5E5");
-        }, 
-        function(){
-            $("h1#updatePdfPresets").css("background-color","white");
-        });
-
-    $('a#pdfSegmenterPresetsFolder').click(function() {
-        midas.loadDialog("selecfolder_pdfpresets","/browse/selectfolder?policy=read");
-        midas.showDialog('Browse for the Folder Containng PDF Segmenter Preset JSON Files');
-        midas.pvw.folderSelectionCallback = function(name, id) {
-            midas.pvw.getPdfSegmenterPresets(id);
-            midas.pvw.pdfSegmenterPresetFolderId = id;
-        };
-    });
 
     $('#selectedPresetFile').change(function(){
         midas.pvw.pdfSegmenterSelectedPresetItemId = $(this).val();

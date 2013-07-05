@@ -9,6 +9,22 @@ midas.pyslicer.statuslist.pdfSegmenterOutputFolderId = '';
 
 
 $(document).ready(function(){
+  
+    $.post(json.global.webroot+'/pyslicer/user', {
+        useAjax: true
+        },
+        function (results) {
+            var resp = $.parseJSON(results);
+            if(resp.status == 'ok' && resp.pyslicerUser) {
+                midas.pyslicer.statuslist.pdfSegmenterRootFolderId = resp.pyslicerUser.root_folder_id;
+                midas.pyslicer.statuslist.pdfSegmenterDataFolderId = resp.pyslicerUser.data_folder_id;
+                midas.pyslicer.statuslist.pdfSegmenterPresetFolderId = resp.pyslicerUser.preset_folder_id;
+                midas.pyslicer.statuslist.pdfSegmenterOutputFolderId = resp.pyslicerUser.output_folder_id;
+            }
+            else {
+                midas.createNotice(resp.message, 3000, resp.status);
+            }
+        });
 
     $('a.paramsLink').click(function () {
         midas.showDialogWithContent('Job Parameters', $(this).attr('qtip'), false);
@@ -56,34 +72,10 @@ $(document).ready(function(){
             window.location = redirectUrl;
         };
     });
-    
-    $('a#createPdfSegmenterFolders').click(function() {
-        midas.loadDialog("selecfolder_pdfpresets","/browse/selectfolder?policy=read");
-        midas.showDialog('Browse for PDF Segmentation Root Folder');
-        midas.pyslicer.statuslist.folderSelectionCallback = function(name, id) {
-            midas.pyslicer.statuslist.pdfSegmenterRootId = id;
-            ajaxWebApi.ajax({
-                method: 'midas.pyslicer.create.pdfsegmentation.folders',
-                args: 'root_folder_id=' + id,
-                success: function (results) {
-                    midas.pyslicer.statuslist.pdfSegmenterDataFolderId = results.data.dataFolderId;
-                    midas.pyslicer.statuslist.pdfSegmenterPresetFolderId = results.data.presetFolderId;
-                    midas.pyslicer.statuslist.pdfSegmenterOutputFolderId = results.data.outputFolderId;
-                },
-                error: function (XMLHttpRequest, textStatus, errorThrown) {
-                    midas.createNotice(XMLHttpRequest.message, '4000', 'error');
-                }
-            });
-        };
-    });
+
 });
 
 itemSelectionCallback = function(name, id)  {
   midas.pyslicer.statuslist.itemSelectionCallback(name, id);
   return;
-}
-
-folderSelectionCallback = function(name, id)  {
-    midas.pyslicer.statuslist.folderSelectionCallback(name, id);
-    return;
 }

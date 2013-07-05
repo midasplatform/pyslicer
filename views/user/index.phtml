@@ -1,0 +1,53 @@
+<?php
+/*=========================================================================
+MIDAS Server
+Copyright (c) Kitware SAS. 20 rue de la Villette. All rights reserved.
+69328 Lyon, FRANCE.
+
+See Copyright.txt for details.
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notices for more information.
+=========================================================================*/
+?>
+<link type="text/css" rel="stylesheet" href="<?php echo $this->moduleWebroot?>/public/css/user/user.index.css" />
+
+<script type="text/javascript" src="<?php echo $this->moduleWebroot?>/public/js/user/user.index.js"></script>
+
+<div class="sectionHeader">
+  PDF Segmenter Settings
+</div>
+<div><a class="createPdfSegmenterFolders">Set/Update default root folder for PDF segmenter</a></div>
+<div class="pyslicerUserContainer sectionContainer">
+  <table class="pyslicerUserTable">
+    <thead><tr><th>Root Folder</th><th>Data Folder</th><th>Preset Folder</th><th>Output Folder</th></tr></thead>
+    <tbody>
+    <?php
+    if ($this->pyslicerUser)
+      {
+      $rootFolderId = $this->pyslicerUser->getRootFolderId();
+      $dataFolderId = $this->pyslicerUser->getDataFolderId();
+      $presetFolderId = $this->pyslicerUser->getPresetFolderId();
+      $outputFolderId = $this->pyslicerUser->getOutputFolderId();
+      echo '<tr><td><a href='. $this->webroot . '/folder/' . $rootFolderId.'>' . $rootFolderId . '</a>'.
+      '</td><td><a href='. $this->webroot . '/folder/' . $dataFolderId.'>' . $dataFolderId . '</a>'.
+      '</td><td><a href='. $this->webroot . '/folder/' . $presetFolderId.'>' . $presetFolderId . '</a>'.
+      '</td><td><a href='. $this->webroot . '/folder/' . $outputFolderId.'>' . $outputFolderId . '</a>'.
+      '</td><td><a class="deletePyslicerUserLink" element="'.$this->pyslicerUser->getKey().'">Unset</a></td></tr>'.
+      '</tbody></table>';
+      }
+    else
+      {
+      echo '</tbody></table><div class="noFoldersMessage">You haven\'t set default folders used for PDF segmenter at this time.</div>';
+      }
+    ?>
+</div>
+
+<div class="deletePyslicerUserDialog" id="template-deletePyslicerUserDialog" style="display: none;">
+  Are you sure you want to unset default folders for PDF segmenter? Please note the folders and their contents will not be deleted. Instead, they will not used as default folders for PDF segmenter.
+  <div class="bottomButtons">
+    <input type="button" class="globalButton deletePyslicerUserYes" value="Yes" />
+    <input type="button" class="globalButton deletePyslicerUserNo" value="No" />
+  </div>
+</div>
+
