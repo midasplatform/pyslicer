@@ -67,7 +67,7 @@ midas.pyslicer.process.updateJobStatus = function() {
                 }
                 $.each(columns, function (col_index, column)  {
                     var colval = statusrow[column];
-                    if(colval == null) {
+                    if(!colval) {
                         if(column == 'notify_date') {
                             colval = emptyNotifyDateColVal;    
                         }

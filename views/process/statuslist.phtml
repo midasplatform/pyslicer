@@ -25,8 +25,11 @@ $this->headScript()->appendFile($this->moduleWebroot . '/public/js/process/proce
   <h3>Start a new pipeline job</h3>  
   <div id="slicerPipelines">
     <ul>
-      <li><a href="javascript:;" id="segmentation" class="slicerPipeline" ><img alt="" src=""/>Segmentation</a></li>
+      <li><a href="javascript:;" id="segmentation" class="slicerPipeline" ><img alt="" src=""/>Simple Region Growing Segmentation</a></li>
       <li><a href="javascript:;" id="registration" class="slicerPipeline" ><img alt="" src=""/>Registration</a></li>
+      <li><a href="javascript:;" id="pdfsegmentation" class="slicerPipeline" ><img alt="" src=""/>Interactive PDF Segmentation (TubeTK)</a>
+          <ul><a href="<?php echo $this->webroot?>/user/settings">Before first run: set default folders for PDF segmenter</a></ul>
+      </li>
     </ul>  
   </div>
   
