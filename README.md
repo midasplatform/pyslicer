@@ -52,7 +52,7 @@ curl https://raw.github.com/pypa/pip/master/contrib/get-pip.py > get_pip.py
 ./Slicer --launch /usr/bin/python get_pip.py 
 ```
 
-Now that pip is installed in your Slicer Python, you can run pip to install pydas and the pydas depedencies.
+Now that pip is installed in your Slicer Python, you can run pip to install pydas and the pydas dependencies.
 
 ```bash
 ./Slicer --launch SLICER_DIR/lib/Python/bin/pip install pydas
